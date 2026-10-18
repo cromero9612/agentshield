@@ -1,7 +1,7 @@
 # AgentShield — instrucciones para Claude Code
 
 Proyecto de 4 personas para el AWS Agent Experience Hackathon (Strands Decider). Entrega: 22 de octubre de 2026.
-Lee `docs/PROPUESTA.md`, `docs/EQUIPO.md` y `docs/BACKLOG.md` antes de proponer cambios grandes.
+Lee `docs/ESTADO.md` (dónde vamos), `docs/PROPUESTA.md`, `docs/EQUIPO.md` y `docs/BACKLOG.md` antes de proponer cambios grandes.
 
 ## Reglas del proyecto
 

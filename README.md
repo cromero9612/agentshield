@@ -13,6 +13,7 @@ Patrón declarado: `#guardrails`.
 |---|---|
 | [docs/PROPUESTA.md](docs/PROPUESTA.md) | Qué construimos y por qué puede ganar |
 | [docs/EQUIPO.md](docs/EQUIPO.md) | Quién hace qué, cómo nos coordinamos, contratos entre módulos |
+| [docs/ESTADO.md](docs/ESTADO.md) | **Dónde vamos:** qué está hecho, qué falta y qué sigue |
 | [docs/DIA1.md](docs/DIA1.md) | Paso a paso para dejar GitHub y AWS listos |
 | [docs/BACKLOG.md](docs/BACKLOG.md) | Todas las tareas por persona y por día |
 
@@ -21,7 +22,8 @@ Patrón declarado: `#guardrails`.
 Funciona desde el día 1 con un Decider simulado, para que nadie espere a que la GPU esté lista.
 
 ```bash
-python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
+python -m venv .venv && source .venv/bin/activate   # requiere Python 3.10+; Windows: .venv\Scripts\activate
+# En macOS el python3 del sistema es 3.9: usa `uv venv --python 3.12 .venv` (ver docs/ESTADO.md)
 pip install -r requirements.txt
 pytest -q                                   # 14 tests
 python -m bench.run_bench                   # 12 casos contra el Decider simulado

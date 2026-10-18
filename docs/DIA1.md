@@ -1,5 +1,7 @@
 # Día 1: dejar todo listo
 
+> Avance real de este día y pendientes: ver [ESTADO.md](ESTADO.md).
+
 Orden recomendado. Lo marcado con **(A)** lo hace Carlos, **(D)** la Persona D, **(Todos)** cada uno.
 
 ## 0. Antes de todo (A, 15 min)
@@ -29,7 +31,7 @@ Orden recomendado. Lo marcado con **(A)** lo hace Carlos, **(D)** la Persona D, 
 
 ```bash
 git clone https://github.com/<org>/agentshield.git && cd agentshield
-python -m venv .venv && source .venv/bin/activate
+python -m venv .venv && source .venv/bin/activate   # Python 3.10+ (en macOS: uv venv --python 3.12 .venv)
 pip install -r requirements.txt
 pytest -q && python -m bench.run_bench
 ```
