@@ -1,0 +1,24 @@
+# Reglas duras de AgentShield (empresa ficticia ElectroNova).
+# El Decider nunca puede relajar estas reglas, solo endurecerlas.
+
+roles:
+  agente_soporte:
+    tools:
+      - get_inventory
+      - get_orders
+      - get_tickets
+      - update_customer
+      - update_order_amount
+      - cancel_orders
+      - issue_refund
+      - send_email
+
+limits:
+  max_amount_confirm: 5000   # quetzales: arriba de esto pide aprobacion
+  max_amount_deny: 15000     # arriba de esto se bloquea siempre
+
+email:
+  allowed_domains:
+    - electronova.example
+
+always_confirm: []

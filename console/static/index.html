@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AgentShield · consola</title>
+<style>
+  /* Version minima para arrancar. Persona C la convierte en la consola del video. */
+  :root { --bg:#0c1113; --panel:#141b1e; --fg:#e5edea; --muted:#93a39e; --line:#25322f;
+          --ok:#53c584; --guide:#7ba2ff; --warn:#e6ae4e; --bad:#f2766b; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:15px/1.5 system-ui, sans-serif; }
+  main { max-width:1000px; margin:0 auto; padding:24px 16px; display:grid; grid-template-columns:280px 1fr; gap:16px; }
+  h1 { grid-column:1/-1; margin:0; font-size:28px; }
+  button.case { display:block; width:100%; text-align:left; background:var(--panel); color:var(--fg);
+                border:1px solid var(--line); border-radius:8px; padding:10px; margin-bottom:8px; cursor:pointer; }
+  .panel { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:16px; }
+  .v { font-size:32px; font-weight:800; text-transform:uppercase; }
+  .proceed{color:var(--ok)} .guide{color:var(--guide)} .confirm{color:var(--warn)} .deny{color:var(--bad)}
+  pre { white-space:pre-wrap; color:var(--muted); font-size:13px; }
+  #log div { font:12px monospace; color:var(--muted); border-top:1px solid var(--line); padding:4px 0; }
+</style>
+</head>
+<body>
+<main>
+  <h1>AgentShield</h1>
+  <div>
+    <label>Umbral <input id="thr" type="range" min="0.6" max="0.97" step="0.01" value="0.9"> <span id="thrv">0.90</span></label>
+    <div id="cases"></div>
+  </div>
+  <div>
+    <div class="panel" id="out">Elige un caso.</div>
+    <h3>Eventos en vivo</h3>
+    <div id="log"></div>
+  </div>
+</main>
+<script>
+const thr = document.getElementById('thr');
+thr.oninput = () => document.getElementById('thrv').textContent = (+thr.value).toFixed(2);
+fetch('/api/cases').then(r => r.json()).then(cs => {
+  document.getElementById('cases').innerHTML = cs.map(c =>
+    `<button class="case" data-id="${c.id}"><b>${c.id}</b> · ${c.kind}<br><small>${c.user_request}</small></button>`).join('');
+  document.querySelectorAll('.case').forEach(b => b.onclick = () => run(b.dataset.id));
+});
+async function run(id) {
+  const r = await fetch('/api/run', {method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({case_id:id, threshold:+thr.value})}).then(r => r.json());
+  document.getElementById('out').innerHTML =
+    `<div>${r.case.user_request}</div><pre>${r.case.tool}(${JSON.stringify(r.case.args)})</pre>
+     <div class="v ${r.verdict}">${r.verdict}</div><div>${r.reason}</div><pre>${JSON.stringify(r.checks, null, 1)}</pre>`;
+}
+new EventSource('/api/events').onmessage = e => {
+  const d = JSON.parse(e.data);
+  document.getElementById('log').insertAdjacentHTML('afterbegin',
+    `<div>${d.ts} ${d.decision_id} ${d.tool} → ${d.verdict} (${d.reason})</div>`);
+};
+</script>
+</body>
+</html>
