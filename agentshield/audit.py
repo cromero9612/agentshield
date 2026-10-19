@@ -10,20 +10,45 @@ import json
 import time
 from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
-# Nunca escribir estos campos completos en la auditoria.
-SENSITIVE_KEYS = {"account", "card", "password", "token"}
+# Nombres normalizados: se ignoran mayusculas, guiones y separadores.
+MASKED_KEYS = {"account", "card"}
+CREDENTIAL_KEYS = {
+    "password", "passwd", "pwd", "token", "accesstoken", "refreshtoken", "idtoken", "authtoken", "apitoken",
+    "authorization", "proxyauthorization", "apikey", "xapikey", "secret", "clientsecret", "apisecret",
+    "awsaccesskeyid", "awssecretaccesskey", "awssessiontoken", "privatekey",
+}
+SENSITIVE_KEYS = MASKED_KEYS | CREDENTIAL_KEYS
+REDACTED = "[REDACTED]"
+
+
+def _minimize(value: Any) -> Any:
+    if isinstance(value, dict):
+        out = {}
+        for key, item in value.items():
+            normalized = "".join(c for c in key.casefold() if c.isalnum()) if isinstance(key, str) else ""
+            if normalized in CREDENTIAL_KEYS:
+                out[key] = REDACTED
+            elif normalized in MASKED_KEYS and item not in (None, ""):
+                if isinstance(item, (str, int, float)) and not isinstance(item, bool):
+                    text = str(item)
+                    out[key] = "***" + text[-4:] if len(text) > 4 else "***"
+                else:
+                    out[key] = REDACTED
+            else:
+                out[key] = _minimize(item)
+        return out
+    if isinstance(value, list):
+        return [_minimize(item) for item in value]
+    if isinstance(value, tuple):
+        return tuple(_minimize(item) for item in value)
+    return value
 
 
 def minimize(args: dict) -> dict:
-    out = {}
-    for k, v in args.items():
-        if k in SENSITIVE_KEYS and v:
-            s = str(v)
-            out[k] = "***" + s[-4:]
-        else:
-            out[k] = v
-    return out
+    """Copia y redacta campos sensibles anidados; no detecta secretos dentro de texto libre."""
+    return _minimize(args)
 
 
 class AuditLog:
@@ -35,9 +60,7 @@ class AuditLog:
         self.listeners.append(fn)
 
     def write(self, record: dict) -> None:
-        record = {**record, "ts": time.strftime("%Y-%m-%dT%H:%M:%S")}
-        if "args" in record:
-            record["args"] = minimize(record["args"])
+        record = minimize({**record, "ts": time.strftime("%Y-%m-%dT%H:%M:%S")})
         with self.path.open("a", encoding="utf-8") as f:
             f.write(json.dumps(record, ensure_ascii=False) + "\n")
         for fn in self.listeners:
