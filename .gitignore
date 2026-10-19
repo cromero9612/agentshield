@@ -2,6 +2,7 @@
 __pycache__/
 *.pyc
 .venv/
+.vscode/
 *.jsonl
 !bench/cases.jsonl
 *.csv
