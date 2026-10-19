@@ -45,13 +45,16 @@ class HttpDecider:
 _INTENT_WORDS = {
     "cancel_orders": ["cancela", "cancelar", "anula"],
     "update_customer": ["actualiza", "cambia", "modifica"],
+    "update_order_status": ["actualiza", "cambia", "pasa", "pásalo", "marca", "avanza", "mueve"],
     "update_order_amount": ["ajusta", "cambia", "precio", "monto"],
     "issue_refund": ["reembolsa", "reembolso", "devuelve"],
     "send_email": ["manda", "envia", "envía", "correo"],
 }
-_BLAST = {"get_inventory": 0, "get_orders": 0, "get_tickets": 0, "update_customer": 1,
+_BLAST = {"get_inventory": 0, "get_orders": 0, "get_tickets": 0, "update_customer": 1, "update_order_status": 1,
           "update_order_amount": 1, "cancel_orders": 2, "issue_refund": 2, "send_email": 2}
-_SYNONYMS = {"delayed": ["atrasad"], "paid": ["pagad"], "shipped": ["enviad"]}
+_SYNONYMS = {"delayed": ["atrasad"], "paid": ["pagad"], "shipped": ["enviad"], "pending": ["pendiente"],
+             "processing": ["procesando", "en proceso"], "delivered": ["entregad"], "cancelled": ["cancelad"]}
+_IGNORED_ARGS = {"limit"}  # parametros de paginacion: no identifican nada que deba estar respaldado
 _INJECTION = re.compile(r"ignora|ignore (all|previous)|instrucciones anteriores|de inmediato", re.I)
 
 
@@ -69,10 +72,14 @@ class MockDecider:
         def seen(v: str) -> bool:
             return v in text or any(s in text for s in _SYNONYMS.get(v, []))
 
-        missing = [k for k, v in args.items() if v not in (None, "") and not seen(str(v).lower())]
+        def values(v):  # los argumentos pueden ser listas (order_ids)
+            return v if isinstance(v, list) else [v]
+
+        missing = [k for k, v in args.items() if k not in _IGNORED_ARGS
+                   for x in values(v) if x not in (None, "") and not seen(str(x).lower())]
         if not missing:
             grounded = 0.95
-        elif any(k.endswith("_id") for k in missing):
+        elif any(k.endswith(("_id", "_ids")) for k in missing):
             grounded = 0.05  # un identificador inventado
         else:
             grounded = 0.60  # dato dudoso: zona de duda

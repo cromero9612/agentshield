@@ -9,6 +9,7 @@ roles:
       - get_tickets
       - update_customer
       - update_order_amount
+      - update_order_status
       - cancel_orders
       - issue_refund
       - send_email
