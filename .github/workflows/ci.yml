@@ -10,3 +10,16 @@ jobs:
           python-version: "3.12"
       - run: pip install strands-agents pyyaml fastapi uvicorn pytest httpx
       - run: pytest -q
+
+  # Comprobacion en Windows (no es un check requerido). Si falla, avisa que algo no corre en Windows.
+  test-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install strands-agents pyyaml fastapi uvicorn pytest httpx
+      - run: pytest -q
+        env:
+          PYTHONUTF8: "1"

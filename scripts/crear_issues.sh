@@ -10,6 +10,10 @@ REPO="${1:?Uso: bash scripts/crear_issues.sh <owner>/<repo>}"
 DRY="${DRY_RUN:-0}"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 BACKLOG="$HERE/../docs/BACKLOG.md"
+# Windows (Git Bash) suele tener `python`/`py` en lugar de `python3`.
+PY="$(command -v python3 || command -v python || command -v py || true)"
+[ -n "$PY" ] || { echo "No encuentro Python (python3, python o py)." >&2; exit 1; }
+TSV="$(mktemp 2>/dev/null || echo "${TMPDIR:-.}/agentshield_issues.tsv")"
 
 run() { if [ "$DRY" = "1" ]; then echo "[dry] $*"; else "$@"; fi; }
 
@@ -17,7 +21,7 @@ for l in "persona-a:0E6E8C" "persona-b:1D7F46" "persona-c:9A6312" "persona-d:B83
   run gh label create "${l%%:*}" --color "${l##*:}" --repo "$REPO" --force
 done
 
-python3 - "$BACKLOG" > /tmp/agentshield_issues.tsv <<'PY'
+"$PY" - "$BACKLOG" > "$TSV" <<'PY'
 import re, sys
 day = None
 for line in open(sys.argv[1], encoding="utf-8"):
@@ -40,6 +44,6 @@ while IFS=$'\t' read -r day who title; do
   esac
   run gh issue create --repo "$REPO" --title "$title" --label "$who" --milestone "$day" \
     --body "Del backlog: **$day**. Responsable: \`$who\`. Ver docs/BACKLOG.md y docs/EQUIPO.md."
-done < /tmp/agentshield_issues.tsv
+done < "$TSV"
 
 echo "Listo. Asigna cada issue a su persona en GitHub (o con: gh issue edit N --add-assignee usuario)."

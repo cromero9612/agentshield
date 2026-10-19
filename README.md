@@ -32,8 +32,21 @@ python -m bench.run_bench                   # 12 casos contra el Decider simulad
 uvicorn console.app:app --reload --port 8080  # consola en http://localhost:8080
 ```
 
+**¿Windows?** Los comandos de arriba cambian un poco: usa [docs/WINDOWS.md](docs/WINDOWS.md).
+
 Con el Decider real: pon `DECIDER_URL=http://IP-DE-LA-EC2:8000` en `.env`.
 Con el agente real (requiere Bedrock): `python -m agent.run_agent "Resumeme los tickets que entraron hoy"`.
+
+## La consola
+
+![Consola de AgentShield evaluando una inyección indirecta con el Decider real](docs/img/consola-inyeccion.png)
+
+Cada acción que propone el agente recorre cinco pasos visibles: lo que pidió el usuario, la acción propuesta, las reglas
+duras, las cuatro preguntas del Decider (con la zona de duda sobre cada medidor) y el veredicto. Tiene modo **sombra**
+(registra lo que habría bloqueado sin frenar nada), umbral ajustable, línea de tiempo en vivo y un formulario de
+**ticket del atacante** para probar inyecciones propias. Un indicador avisa si el Decider es el real o el simulado.
+
+![Formulario del ticket del atacante](docs/img/consola-ticket-atacante.png)
 
 ## Estructura
 
