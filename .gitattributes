@@ -1,0 +1,5 @@
+# Saltos de linea consistentes entre Windows, macOS y Linux.
+* text=auto eol=lf
+*.sh text eol=lf
+*.png binary
+*.jpg binary
