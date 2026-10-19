@@ -1,7 +1,7 @@
 # Estado del proyecto
 
 > Documento vivo. Quien avance algo lo actualiza en el mismo PR.
-> **Última actualización:** sábado 17 de octubre de 2026 (Día 1) · **Responsable del documento:** Persona A (Carlos).
+> **Última actualización:** domingo 18 de octubre de 2026 (Día 2) · **Responsable del documento:** Persona A (Carlos).
 
 Este documento responde tres preguntas: **qué está hecho, qué falta y qué sigue**. Está escrito para que alguien que
 llega de cero (o una sesión nueva de Claude Code) retome el trabajo sin preguntar nada.
@@ -70,6 +70,26 @@ Se comprobó en el entorno virtual, no por suposición (regla de `CLAUDE.md`):
 - **Cuota de GPU:** se solicitó aumento de *Running On-Demand G and VT instances* a **4 vCPU** en `us-east-1`
   (el valor aplicado es 0, que es lo normal en una cuenta nueva). Estado: pendiente.
 
+### 2.6 Análisis de brechas y plan de convergencia (llegaron el 18 de octubre)
+Un compañero comparó el repo con la guía interna de implementación v2.1 y dejó dos documentos, ya en `docs/`:
+- [analisis.md](analisis.md): diagnóstico de brechas del código frente a la guía (hallazgos G-01 a G-09, matriz de cumplimiento, backlog P0/P1/P2).
+- [integracion.md](integracion.md): **propuesta** de un solo alcance (tres herramientas de pedidos, un guard, una política, SQLite, GET real a una API de staging). Está **pendiente de aprobación del equipo** y no está implementada.
+
+La guía v2.1 en sí **no está en el repo**; los dos documentos la citan como especificación.
+
+**Verificación propia (18-oct, Python 3.12, `main` en `22d1311`).** El análisis no pudo ejecutar `pytest` ni instalar Strands; aquí sí se ejecutó:
+
+| Hallazgo | Resultado al reproducirlo |
+|---|---|
+| G-01 `combine(GuardAnswers(.95,.95,0,0), HardResult())` | **`proceed`**: una cancelación con scores optimistas pasa sin confirmación |
+| G-02 intención baja (`.05`) + regla dura `confirm` | **`confirm`**: un caso que debía corregirse (`guide`) queda aprobable |
+| G-03 respuestas `NaN` o fuera de rango | **`proceed`**: una salida inválida del Decider permite la acción |
+| G-08 `audit.minimize` | Solo enmascara 4 claves de primer nivel y deja 4 caracteres; no redacta anidados ni `Authorization` |
+| G-09 `.env` | Confirmado: ningún módulo carga `.env` (no hay `dotenv`); `DECIDER_URL` en `.env` **no tiene efecto** |
+| `pytest -q` | 14 passed (el análisis no pudo correrlo) |
+
+Los demás hallazgos (G-04 a G-07) se leyeron en el código pero no se reprodujeron todavía.
+
 ## 3. Lo que falta (checklist)
 
 ### 3.1 Inmediato (bloquea a otros)
@@ -83,6 +103,14 @@ Se comprobó en el entorno virtual, no por suposición (regla de `CLAUDE.md`):
 - [ ] Cada compañero crea su perfil en **AWS Builder Center** (requisito para participar).
 - [ ] Abrir la pestaña **Rules** del hackathon y confirmar: elegibilidad desde Guatemala, equipos de 4 y registro del
       equipo. *A (issue #1).*
+
+### 3.1b Decisiones de producto que bloquean el rumbo
+- [ ] **¿Se adopta el alcance de [integracion.md](integracion.md)?** Implica pasar de 8 herramientas a 3 (`get_orders`,
+      `update_order_status`, `cancel_orders`), nuevos IDs de casos AS y cambios en los contratos de [EQUIPO.md](EQUIPO.md).
+      Los contratos **no se cambian sin acuerdo de los 4**. *Decide: A con B, C y D.*
+- [ ] Compartir la guía v2.1 con el equipo (o resumirla en `docs/`), porque es la especificación en disputa.
+- [ ] Sin importar la decisión anterior, hay **correcciones de seguridad del guard** que no dependen del alcance
+      (G-01, G-02, G-03, G-04, G-09). Son del módulo `agentshield/` (Persona A) y cada una lleva test y caso en el benchmark.
 
 ### 3.2 Por persona (resumen; el detalle está en los issues y en [BACKLOG.md](BACKLOG.md))
 | Persona | Siguiente paso concreto |
@@ -144,3 +172,4 @@ Con el agente real (requiere Bedrock): `python -m agent.run_agent "Resumeme los 
 | Fecha | Cambio |
 |---|---|
 | 2026-10-17 | Versión inicial: estado al cierre del Día 1 |
+| 2026-10-18 | Se incorporan `analisis.md` e `integracion.md`, verificación de G-01/02/03/08/09 y decisiones pendientes |
