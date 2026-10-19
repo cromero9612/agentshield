@@ -35,7 +35,7 @@ python -m venv .venv && source .venv/bin/activate   # Python 3.10+ (en macOS: uv
 pip install -r requirements.txt
 pytest -q && python -m bench.run_bench
 ```
-Si ves `14 passed` y `12/12`, ya puedes trabajar aunque AWS aún no esté listo.
+Si ves `36 passed` y `12/12`, ya puedes trabajar aunque AWS aún no esté listo.
 
 ## 3. AWS (D, 1–2 h)
 
