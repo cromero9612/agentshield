@@ -35,17 +35,20 @@ class Shield:
     def evaluate(self, user_request: str, tool_name: str, tool_input: dict,
                  tool_outputs: list[str] | None = None, role: str = "agente_soporte") -> Verdict:
         hard = self.policy.check(tool_name, tool_input, role)
-        state = render_state(user_request, tool_name, tool_input, tool_outputs)
-        try:
-            ans = self.decider.ask(state)
-        except Exception as exc:  # fail-closed: sin respuesta del Decider no se ejecuta nada
-            reason = (f"regla dura: {'; '.join(hard.reasons)}" if hard.verdict == DENY
-                      else f"el Decider no respondio ({type(exc).__name__})")
-            ans = None
-            verdict = Verdict(DENY, reason, checks={"grounded": None, "intent": None, "injected": None,
-                                                    "blast": None, "threshold": self.threshold})
+        ans = None
+        empty_checks = {"grounded": None, "intent": None, "injected": None,
+                        "blast": None, "threshold": self.threshold}
+        if hard.verdict == DENY:
+            # La politica ya resolvio: no construir ni enviar contexto al modelo.
+            verdict = Verdict(DENY, "regla dura: " + "; ".join(hard.reasons), checks=empty_checks)
         else:
-            verdict = combine(ans, hard, self.threshold)
+            state = render_state(user_request, tool_name, tool_input, tool_outputs)
+            try:
+                ans = self.decider.ask(state)
+            except Exception as exc:  # fail-closed: sin respuesta del Decider no se ejecuta nada
+                verdict = Verdict(DENY, f"el Decider no respondio ({type(exc).__name__})", checks=empty_checks)
+            else:
+                verdict = combine(ans, hard, self.threshold)
         self.audit.write({
             "decision_id": str(uuid.uuid4())[:8],
             "mode": self.mode,
