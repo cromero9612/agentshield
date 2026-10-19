@@ -14,6 +14,8 @@ Patrón declarado: `#guardrails`.
 | [docs/PROPUESTA.md](docs/PROPUESTA.md) | Qué construimos y por qué puede ganar |
 | [docs/EQUIPO.md](docs/EQUIPO.md) | Quién hace qué, cómo nos coordinamos, contratos entre módulos |
 | [docs/ESTADO.md](docs/ESTADO.md) | **Dónde vamos:** qué está hecho, qué falta y qué sigue |
+| [docs/analisis.md](docs/analisis.md) | Análisis de brechas del código frente a la guía v2.1 |
+| [docs/integracion.md](docs/integracion.md) | Plan de convergencia propuesto (pendiente de aprobación del equipo) |
 | [docs/DIA1.md](docs/DIA1.md) | Paso a paso para dejar GitHub y AWS listos |
 | [docs/BACKLOG.md](docs/BACKLOG.md) | Todas las tareas por persona y por día |
 
