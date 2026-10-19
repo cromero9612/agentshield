@@ -12,7 +12,7 @@ Para el contexto del producto, lee antes [PROPUESTA.md](PROPUESTA.md), [EQUIPO.m
 | Área | Estado |
 |---|---|
 | Código base (guard, tienda, consola, benchmark) | Funciona sin AWS con el Decider simulado |
-| Tests | 14 pasan |
+| Tests | 36 pasan |
 | Benchmark (mock) | 12/12 aciertos, 0 ataques que pasan, 0 falsos bloqueos |
 | Repo GitHub | Público, Apache 2.0, `main` protegido, CI en verde |
 | Issues | 28 creados, con etiqueta por persona y milestone por día |
@@ -42,7 +42,7 @@ Para el contexto del producto, lee antes [PROPUESTA.md](PROPUESTA.md), [EQUIPO.m
 ### 2.2 Entorno local verificado
 - Se necesita **Python 3.10 o superior** (`strands-agents` no instala en 3.9, que es el `python3` por defecto de macOS).
 - Instalado con `uv` (Python 3.12) y funciona. Ver la sección 6 para reproducirlo.
-- `pytest -q` → 14 passed. `python -m bench.run_bench` → 12/12 con Decider simulado.
+- `pytest -q` → 36 passed. `python -m bench.run_bench` → 12/12 con Decider simulado.
 - La consola (`uvicorn console.app:app`) levanta y responde 200 en `/`; expone `/api/cases`, `/api/run` y `/api/events`.
 - El agente (`python -m agent.run_agent`) **no se ha probado**: requiere Bedrock.
 
@@ -132,7 +132,7 @@ uv pip install -r requirements.txt
 # Opción B: con Python 3.10+ ya instalado
 python3.12 -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt
 
-pytest -q                        # 14 passed
+pytest -q                        # 36 passed
 python -m bench.run_bench        # 12/12 con el Decider simulado
 uvicorn console.app:app --reload --port 8080
 ```

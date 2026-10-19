@@ -9,6 +9,7 @@ Regla de oro: el Decider solo puede ENDURECER una decision. Nunca convierte un
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field
 
 PROCEED, GUIDE, CONFIRM, DENY = "proceed", "guide", "confirm", "deny"
@@ -52,10 +53,27 @@ def _stricter(a: str, b: str) -> str:
     return a if _RANK[a] >= _RANK[b] else b
 
 
+def _invalid_inputs(ans: GuardAnswers, threshold: float) -> list[str]:
+    """Nombres de los valores que no se pueden interpretar (NaN, infinito o fuera de rango)."""
+    bad = []
+    for name in ("grounded", "intent", "injected"):
+        x = getattr(ans, name)
+        if isinstance(x, bool) or not isinstance(x, (int, float)) or not math.isfinite(x) or not 0.0 <= x <= 1.0:
+            bad.append(name)
+    b = ans.blast
+    if isinstance(b, bool) or not isinstance(b, (int, float)) or not math.isfinite(b) or not 0.0 <= b <= 2.0:
+        bad.append("blast")
+    t = threshold
+    if isinstance(t, bool) or not isinstance(t, (int, float)) or not math.isfinite(t) or not 0.5 < t <= 1.0:
+        bad.append("threshold")
+    return bad
+
+
 def combine(ans: GuardAnswers, hard: HardResult, threshold: float = 0.9) -> Verdict:
     """Decide la accion final.
 
     Orden de evaluacion (de mas grave a menos grave):
+      0. Valores invalidos (NaN, fuera de rango, umbral invalido) -> deny (fail-closed)
       1. Regla dura deny             -> deny
       2. Inyeccion probable          -> deny
       3. No coincide con la intencion -> guide (volver a la tarea)
@@ -63,10 +81,12 @@ def combine(ans: GuardAnswers, hard: HardResult, threshold: float = 0.9) -> Verd
       5. Zona de duda (entre 1-T y T) -> confirm
       6. Impacto irreversible        -> confirm
       7. Si no                       -> proceed
-    Al final se toma el mas estricto entre esto y la regla dura.
+    Al final se toma el mas estricto entre esto y la regla dura, con una excepcion:
+    una regla dura "confirm" NO convierte un "guide" en "confirm". Una propuesta que no
+    corresponde a lo pedido o no tiene respaldo se corrige; nunca llega a un humano para
+    que la apruebe.
     """
     t = threshold
-    lo = 1.0 - t
     checks = {
         "grounded": ans.grounded,
         "intent": ans.intent,
@@ -74,6 +94,12 @@ def combine(ans: GuardAnswers, hard: HardResult, threshold: float = 0.9) -> Verd
         "blast": ans.blast,
         "threshold": t,
     }
+
+    bad = _invalid_inputs(ans, t)
+    if bad:
+        return Verdict(DENY, "valores invalidos del Decider o del umbral: " + ", ".join(bad), checks=checks)
+
+    lo = 1.0 - t
 
     if hard.verdict == DENY:
         return Verdict(DENY, "regla dura: " + "; ".join(hard.reasons), checks=checks)
@@ -97,6 +123,8 @@ def combine(ans: GuardAnswers, hard: HardResult, threshold: float = 0.9) -> Verd
     else:
         v = Verdict(PROCEED, "todas las comprobaciones pasan", checks=checks)
 
+    if v.action == GUIDE:
+        return v
     final = _stricter(v.action, hard.verdict)
     if final != v.action:
         return Verdict(final, "regla dura: " + "; ".join(hard.reasons), v.hint, checks)
