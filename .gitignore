@@ -6,3 +6,4 @@ __pycache__/
 !bench/cases.jsonl
 *.csv
 .pytest_cache/
+!docs/legacy/*.jsonl

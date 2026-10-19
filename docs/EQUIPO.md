@@ -24,6 +24,9 @@ Todos escriben casos de prueba en `bench/cases.jsonl`, pero **cada quien escribe
 
 Estos contratos permiten trabajar en paralelo sin pisarse.
 
+> **Desde el 18-oct rigen los contratos v2** (sección *Contratos v2*, más abajo). Los bloques de código de esta
+> sección describen la versión original (v0); lo que no se menciona como cambiado en v2 sigue igual.
+
 ```python
 # 1. Lo que devuelve el Decider (agentshield/combine.py)
 GuardAnswers(grounded: float, intent: float, injected: float, blast: float, latency_ms: float | None)
@@ -40,6 +43,30 @@ Shield.evaluate(user_request, tool_name, tool_input, tool_outputs) -> Verdict
 # 5. Un caso del benchmark (bench/cases.jsonl, una línea JSON)
 {"id", "kind", "user_request", "tool", "args", "tool_outputs", "expected"}
 ```
+
+### Contratos v2 (`unified-1`): adoptados el 18-oct según [integracion.md](integracion.md)
+
+El alcance de la entrega pasa a **operaciones seguras sobre pedidos** (3 herramientas). Los contratos evolucionan con
+compatibilidad: lo marcado "sin cambio" no se toca, y lo nuevo es **aditivo** mientras no se indique lo contrario.
+
+| Contrato | Cambio |
+|---|---|
+| 1. `GuardAnswers` | **Sin cambio de campos.** El cliente del Decider valida finitud y rangos; un valor inválido produce `deny`. `blast` va de 0 a 2 y los otros tres de 0 a 1 |
+| 2. `Verdict` | **Sin cambio.** `action` sigue en minúsculas (`proceed`, `guide`, `confirm`, `deny`). Se agregan códigos de razón estables (`reason_codes`) |
+| 3. `Shield.evaluate` | Se mantiene la firma y se añade un **contexto confiable opcional** (actor, organización, entorno, `dry_run`) que **construye el servidor, nunca el LLM** |
+| 4. Evento de auditoría | Pasa a un sobre **versionado** (`schema_version`) con `correlation_id`, `source`, `decider.mode` y `execution.status`. Los campos actuales se conservan |
+| 5. Caso del benchmark | Se agregan `spec_version: "unified-1"`, `use_case_id` (AS-01 a AS-15), backend permitido y aserciones de efectos |
+
+**Catálogo de herramientas de entrega (solo estas tres):** `get_orders(order_id?, status?, limit=10)`,
+`update_order_status(order_id, new_status)` y `cancel_orders(order_ids, reason)`, con **máximo un ID por ejecución**.
+Las otras cinco herramientas salen del catálogo y no hay compatibilidad silenciosa con sus firmas viejas.
+
+**Casos:** los IDs `AS-01` a `AS-15` pasan a tener el significado de la guía v2.1 (ver integracion.md §6). Los casos
+originales se conservan en [legacy/cases-v0.jsonl](legacy/cases-v0.jsonl) con prefijo `LEGACY-`. **No se comparan
+métricas viejas y nuevas como una serie continua.**
+
+**Regla de migración:** nadie cambia un contrato por su cuenta. Cada cambio es un PR pequeño que actualiza código,
+tests y consumidores a la vez, y lo revisa otra persona.
 
 ## Flujo de Git
 
