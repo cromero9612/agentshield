@@ -1,7 +1,7 @@
 # Integración de AgentShield: un solo alcance para la hackathon
 
 **Fecha:** 18 de octubre de 2026.  
-**Estado:** plan de convergencia propuesto para el equipo; describe el objetivo y la migración, no funcionalidades ya implementadas.  
+**Estado:** **adoptado como alcance de la entrega por Carlos (Persona A) el 18 de octubre de 2026**; pendiente de la revisión de B, C y D en el PR que lo incorpora. Describe el objetivo y la migración, no funcionalidades ya implementadas.  
 **Base:** código actual del repositorio, guía de implementación v2.1 y [análisis de brechas](analisis.md).  
 **Resultado buscado:** un agente, un catálogo de herramientas, un guard, una política, un flujo de aprobación y una demo que puedan explicar todos los integrantes.
 
