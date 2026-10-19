@@ -38,14 +38,17 @@ Con el agente real (requiere Bedrock): `python -m agent.run_agent "Resumeme los 
 
 ## La consola
 
-![Consola de AgentShield evaluando una inyección indirecta con el Decider real](docs/img/consola-inyeccion.png)
+![Consola de AgentShield (tema oscuro) evaluando una inyección indirecta con el Decider real](docs/img/consola-oscuro.jpg)
 
 Cada acción que propone el agente recorre cinco pasos visibles: lo que pidió el usuario, la acción propuesta, las reglas
 duras, las cuatro preguntas del Decider (con la zona de duda sobre cada medidor) y el veredicto. Tiene modo **sombra**
-(registra lo que habría bloqueado sin frenar nada), umbral ajustable, línea de tiempo en vivo y un formulario de
-**ticket del atacante** para probar inyecciones propias. Un indicador avisa si el Decider es el real o el simulado.
+(registra lo que habría bloqueado sin frenar nada), umbral ajustable, línea de tiempo en vivo, tema oscuro y claro, y un
+formulario de **ticket del atacante** para probar inyecciones propias. Un indicador avisa si el Decider es el real o el
+simulado.
 
-![Formulario del ticket del atacante](docs/img/consola-ticket-atacante.png)
+| Tema claro | Ticket del atacante |
+|---|---|
+| ![Tema claro](docs/img/consola-claro.jpg) | ![Formulario del ticket del atacante](docs/img/consola-ticket-atacante.jpg) |
 
 ## Estructura
 
