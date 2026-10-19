@@ -13,12 +13,12 @@ from .base import (CANCELLABLE, NEXT_STATUS, InvalidTransition, NotCancellable, 
 
 SEED = Path(__file__).resolve().parent.parent / "orders_seed.json"
 
-_SCHEMA = """
-CREATE TABLE orders (order_id TEXT PRIMARY KEY, customer_alias TEXT NOT NULL, organization_id TEXT NOT NULL,
-  status TEXT NOT NULL, version INTEGER NOT NULL, source_system TEXT NOT NULL, customer_note TEXT);
-CREATE TABLE history (id INTEGER PRIMARY KEY AUTOINCREMENT, order_id TEXT NOT NULL, from_status TEXT NOT NULL,
-  to_status TEXT NOT NULL, reason TEXT, at TEXT NOT NULL);
-"""
+_SCHEMA = (
+    """CREATE TABLE orders (order_id TEXT PRIMARY KEY, customer_alias TEXT NOT NULL, organization_id TEXT NOT NULL,
+      status TEXT NOT NULL, version INTEGER NOT NULL, source_system TEXT NOT NULL, customer_note TEXT)""",
+    """CREATE TABLE history (id INTEGER PRIMARY KEY AUTOINCREMENT, order_id TEXT NOT NULL, from_status TEXT NOT NULL,
+      to_status TEXT NOT NULL, reason TEXT, at TEXT NOT NULL)""",
+)
 
 
 class MockOrderConnector:
@@ -29,17 +29,42 @@ class MockOrderConnector:
         self._lock = threading.RLock()
         self._conn = sqlite3.connect(db_path, check_same_thread=False)
         self._conn.row_factory = sqlite3.Row
-        self.reset()
+        try:
+            self._initialize()
+        except Exception:
+            self._conn.close()
+            raise
+
+    def _initialize(self) -> None:
+        """Crea tablas y seed una sola vez; abrir una base existente nunca reinicia sus datos."""
+        with self._lock, self._conn:
+            # Serializa la primera inicializacion incluso entre conexiones distintas al mismo archivo.
+            self._conn.execute("BEGIN IMMEDIATE")
+            tables = {r[0] for r in self._conn.execute(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('orders', 'history')")}
+            if tables:
+                if tables != {"orders", "history"}:
+                    raise sqlite3.DatabaseError("esquema de pedidos incompleto; no se modificaron sus datos")
+                return
+            for statement in _SCHEMA:
+                self._conn.execute(statement)
+            self._insert_seed()
+
+    def _insert_seed(self) -> None:
+        """Carga el seed dentro de la transaccion del llamador, sin commits implicitos."""
+        data = json.loads(self._seed.read_text(encoding="utf-8"))
+        self._conn.executemany(
+            "INSERT INTO orders VALUES (?,?,?,?,1,'mock',?)",
+            [(o["order_id"], o["customer_alias"], data["organization_id"], o["status"], o.get("customer_note"))
+             for o in data["orders"]])
 
     def reset(self) -> None:
         """Vuelve al seed. Es solo para pruebas y demos; no hay endpoint publico que lo llame."""
-        data = json.loads(self._seed.read_text(encoding="utf-8"))
         with self._lock, self._conn:
-            self._conn.executescript("DROP TABLE IF EXISTS orders; DROP TABLE IF EXISTS history;" + _SCHEMA)
-            self._conn.executemany(
-                "INSERT INTO orders VALUES (?,?,?,?,1,'mock',?)",
-                [(o["order_id"], o["customer_alias"], data["organization_id"], o["status"], o.get("customer_note"))
-                 for o in data["orders"]])
+            self._conn.execute("BEGIN IMMEDIATE")
+            self._conn.execute("DELETE FROM history")
+            self._conn.execute("DELETE FROM orders")
+            self._insert_seed()
 
     # -- lectura ---------------------------------------------------------------------------------
     @staticmethod
