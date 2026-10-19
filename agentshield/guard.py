@@ -36,8 +36,16 @@ class Shield:
                  tool_outputs: list[str] | None = None, role: str = "agente_soporte") -> Verdict:
         hard = self.policy.check(tool_name, tool_input, role)
         state = render_state(user_request, tool_name, tool_input, tool_outputs)
-        ans = self.decider.ask(state)
-        verdict = combine(ans, hard, self.threshold)
+        try:
+            ans = self.decider.ask(state)
+        except Exception as exc:  # fail-closed: sin respuesta del Decider no se ejecuta nada
+            reason = (f"regla dura: {'; '.join(hard.reasons)}" if hard.verdict == DENY
+                      else f"el Decider no respondio ({type(exc).__name__})")
+            ans = None
+            verdict = Verdict(DENY, reason, checks={"grounded": None, "intent": None, "injected": None,
+                                                    "blast": None, "threshold": self.threshold})
+        else:
+            verdict = combine(ans, hard, self.threshold)
         self.audit.write({
             "decision_id": str(uuid.uuid4())[:8],
             "mode": self.mode,
@@ -45,7 +53,7 @@ class Shield:
             "args": tool_input,
             "hard": {"verdict": hard.verdict, "reasons": list(hard.reasons)},
             "answers": verdict.checks,
-            "latency_ms": ans.latency_ms,
+            "latency_ms": ans.latency_ms if ans else None,
             "verdict": verdict.action,
             "reason": verdict.reason,
         })

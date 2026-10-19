@@ -21,4 +21,6 @@ email:
   allowed_domains:
     - electronova.example
 
-always_confirm: []
+# Herramientas que siempre piden aprobacion, sin importar lo que opine el Decider
+always_confirm:
+  - cancel_orders

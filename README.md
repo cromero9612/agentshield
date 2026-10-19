@@ -27,7 +27,7 @@ Funciona desde el día 1 con un Decider simulado, para que nadie espere a que la
 python -m venv .venv && source .venv/bin/activate   # requiere Python 3.10+; Windows: .venv\Scripts\activate
 # En macOS el python3 del sistema es 3.9: usa `uv venv --python 3.12 .venv` (ver docs/ESTADO.md)
 pip install -r requirements.txt
-pytest -q                                   # 14 tests
+pytest -q                                   # 36 tests
 python -m bench.run_bench                   # 12 casos contra el Decider simulado
 uvicorn console.app:app --reload --port 8080  # consola en http://localhost:8080
 ```
