@@ -32,7 +32,7 @@ def run(user_request, script, tmp_path, *, decider=None, approver=None, mode="en
     agent = Agent(model=model, tools=tools.ALL_TOOLS, interventions=[AgentShieldHandler(shield, approver=approver)],
                   callback_handler=None)
     agent(user_request)
-    log = tmp_path / "audit.jsonl"  # no existe si el guard fallo antes de poder auditar (hallazgo G-04, PR #31)
+    log = tmp_path / "audit.jsonl"
     events = [json.loads(line) for line in log.read_text(encoding="utf-8").splitlines()] if log.exists() else []
     return agent, model, events
 
@@ -112,12 +112,14 @@ class BrokenDecider:
 
 def test_fail_closed_when_the_decider_is_down(tmp_path):
     """Si el Decider falla, el handler cierra (on_error=deny): ninguna escritura se ejecuta."""
-    agent, _, _ = run("Cancela el pedido ORD-1002; motivo: pedido duplicado.",
+    agent, _, events = run("Cancela el pedido ORD-1002; motivo: pedido duplicado.",
                       [call("cancel_orders", order_ids=["ORD-1002"], reason="pedido duplicado"), say("ok")],
                       tmp_path, decider=BrokenDecider(), approver=lambda p: True)
     assert CONN().mutation_count() == 0
     assert CONN().get_orders(order_id="ORD-1002")[0].status == "PENDING"
     assert not any("cancelado" in r for r in tool_results(agent))  # la herramienta nunca llego a ejecutarse
+    assert len(events) == 1 and events[0]["verdict"] == "deny"
+    assert "TimeoutError" in events[0]["reason"] and events[0]["latency_ms"] is None
 
 
 def test_shadow_mode_records_the_verdict_but_lets_the_action_run(tmp_path):
