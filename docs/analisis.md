@@ -1,5 +1,7 @@
 # Análisis de brecha: guía AgentShield v2.1 frente al código
 
+> **Documento histórico:** analiza el commit `22d1311`, no el main actual. Varias brechas del núcleo ya se corrigieron. Consultar [ESTADO.md](ESTADO.md) para evidencia vigente y [BACKLOG.md](BACKLOG.md) para pendientes; se conserva este análisis para trazabilidad.
+
 **Fecha de revisión:** 18 de octubre de 2026, zona America/Guatemala.  
 **Repositorio revisado:** copia local del repositorio.  
 **Commit de referencia:** `22d13111a13e22875c72a41d2e50c5aea8c58646` — `Base del proyecto`.  
@@ -154,7 +156,7 @@ Además se exponen `get_inventory`, `get_tickets`, `update_customer`, `update_or
 | Persistencia | SQLite para demo | Diccionario `DB` y lista `SENT_EMAILS` en memoria. |
 | Reset | Reproducible y restringido | `reset()` restaura seed local; no endpoint administrativo ni persistencia. |
 
-Evidencia: [store/data.json](../store/data.json), [store/tools.py](../store/tools.py:14).
+Evidencia: [store/data.json histórico, conservado como data-v0.json](legacy/data-v0.json), [store/tools.py](../store/tools.py:14).
 
 ### 5.3 Roles y autoridad
 

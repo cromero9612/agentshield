@@ -1,76 +1,107 @@
 # AgentShield
 
-Guard de tool calls para agentes de IA, construido con **Strands Agents**, **Strands Decider 2B** y **Amazon Bedrock**.
-Antes de que un agente reembolse dinero, cancele pedidos o mande un correo, AgentShield le hace cuatro preguntas
-al Decider en una sola llamada y decide si la acción **pasa, se corrige, espera a un humano o se bloquea**.
+Guard de llamadas a herramientas para un agente de pedidos de **ElectroNova**, una empresa ficticia. El agente utiliza **Strands Agents + Amazon Bedrock**; AgentShield intercepta sus propuestas, consulta **Strands Decider 2B** y combina las señales con políticas deterministas.
 
-Proyecto para el *AWS Agent Experience Hackathon: Strands Decider* (entrega: 23 de octubre de 2026, 11:59 PM PDT).
-Patrón declarado: `#guardrails`.
+El catálogo de entrega contiene exactamente tres herramientas:
 
-## Empieza aquí (equipo)
+| Herramienta | Contrato | Comportamiento actual |
+|---|---|---|
+| `get_orders` | `order_id?`, `status?`, `limit=10` | Consulta hasta diez pedidos. |
+| `update_order_status` | `order_id`, `new_status` | Avanza una transición permitida e incrementa la versión. |
+| `cancel_orders` | `order_ids`, `reason` | Un ID por ejecución; requiere confirmación en la ruta protegida del agente. |
 
-| Documento | Para qué |
-|---|---|
-| [docs/PROPUESTA.md](docs/PROPUESTA.md) | Qué construimos y por qué puede ganar |
-| [docs/EQUIPO.md](docs/EQUIPO.md) | Quién hace qué, cómo nos coordinamos, contratos entre módulos |
-| [docs/ESTADO.md](docs/ESTADO.md) | **Dónde vamos:** qué está hecho, qué falta y qué sigue |
-| [docs/analisis.md](docs/analisis.md) | Análisis de brechas del código frente a la guía v2.1 |
-| [docs/integracion.md](docs/integracion.md) | Plan de convergencia propuesto (pendiente de aprobación del equipo) |
-| [docs/DIA1.md](docs/DIA1.md) | Paso a paso para dejar GitHub y AWS listos |
-| [docs/BACKLOG.md](docs/BACKLOG.md) | Todas las tareas por persona y por día |
+El backend disponible es `MockOrderConnector`, sobre SQLite. **REST staging, ejecutor autorizado, identidad confiable y aprobaciones persistentes siguen pendientes.** Las herramientas no constituyen por sí solas una barrera de autorización.
 
-## Correr en 2 minutos (sin AWS)
+## Arranque local
 
-Funciona desde el día 1 con un Decider simulado, para que nadie espere a que la GPU esté lista.
+Python 3.12 recomendado. Desde la raíz del repositorio, en macOS/Linux:
 
 ```bash
-python -m venv .venv && source .venv/bin/activate   # requiere Python 3.10+; Windows: .venv\Scripts\activate
-# En macOS el python3 del sistema es 3.9: usa `uv venv --python 3.12 .venv` (ver docs/ESTADO.md)
-pip install -r requirements.txt
-pytest -q                                   # 36 tests
-python -m bench.run_bench                   # 12 casos contra el Decider simulado
-uvicorn console.app:app --reload --port 8080  # consola en http://localhost:8080
+python3.12 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+python -m pytest -q
+python -m bench.run_bench
+python -m uvicorn console.app:app --reload --port 8080
 ```
 
-**¿Windows?** Los comandos de arriba cambian un poco: usa [docs/WINDOWS.md](docs/WINDOWS.md).
+Abre [http://localhost:8080](http://localhost:8080). En Windows utiliza los comandos de [WINDOWS.md](docs/WINDOWS.md).
 
-Con el Decider real: pon `DECIDER_URL=http://IP-DE-LA-EC2:8000` en `.env`.
-Con el agente real (requiere Bedrock): `python -m agent.run_agent "Resumeme los tickets que entraron hoy"`.
+La consola y las pruebas funcionan sin AWS. Si `DECIDER_URL` no está configurado, se usa `MockDecider`. El benchmark carga `.env`: para probar con mock deja esa variable vacía tanto en el archivo como en el entorno.
 
-## La consola
+## Qué se ejecuta en cada modalidad
 
-![Consola de AgentShield evaluando una inyección indirecta con el Decider real](docs/img/consola-inyeccion.png)
+| Modalidad | Qué utiliza | Qué demuestra |
+|---|---|---|
+| Consola `/api/run` | Propuestas de `bench/cases.jsonl` + guard | Veredictos de fixtures; no ejecuta herramientas ni Bedrock. |
+| Consola `/api/attack` | Texto y propuesta preparados + guard | Evaluación de inyección; el formulario aún conserva referencias del alcance anterior. |
+| Tests del hook | `Agent` real de Strands, `ScriptedModel`, `MockDecider`, tools y SQLite | Intercepción y efectos reales sobre mock; generación y clasificación simuladas. |
+| Agente CLI | Strands + Bedrock, guard y tools mock | Ruta preparada para ejecución real; requiere acceso AWS y un endpoint Decider para usar el clasificador real. |
 
-Cada acción que propone el agente recorre cinco pasos visibles: lo que pidió el usuario, la acción propuesta, las reglas
-duras, las cuatro preguntas del Decider (con la zona de duda sobre cada medidor) y el veredicto. Tiene modo **sombra**
-(registra lo que habría bloqueado sin frenar nada), umbral ajustable, línea de tiempo en vivo y un formulario de
-**ticket del atacante** para probar inyecciones propias. Un indicador avisa si el Decider es el real o el simulado.
+Los tests locales no sustituyen la evidencia E2E en AWS. Un `PROCEED` o `effective=proceed` mostrado por la consola es un resultado de evaluación, no una confirmación de que se ejecutó una operación.
 
-![Formulario del ticket del atacante](docs/img/consola-ticket-atacante.png)
+## Decider real y agente
 
-## Estructura
+El proyecto carga `.env` sin reemplazar variables ya definidas en el entorno. Usa [.env.example](.env.example) como referencia, sin sobrescribir un archivo de configuración existente.
 
+```dotenv
+DECIDER_URL=http://127.0.0.1:8000
 ```
-agentshield/          el guard (patrón reutilizable)
-  questions.py        las 4 preguntas tipadas al Decider        ← Persona A
-  combine.py          respuestas + reglas → veredicto            ← Persona A
-  decider_client.py   cliente HTTP real + Decider simulado        ← Persona A
-  policy.py           reglas duras desde policies/default.yaml   ← Persona A
-  guard.py            Shield + InterventionHandler de Strands    ← Persona A
-  audit.py            auditoría JSONL + eventos para la consola  ← Persona C
-store/                herramientas y datos ficticios de ElectroNova ← Persona B
-agent/                agente Strands + Bedrock                    ← Persona B
-console/              consola web con SSE                         ← Persona C
-bench/                casos etiquetados y benchmark               ← Persona D
-policies/             reglas duras en YAML
-tests/                pytest
+
+Ejemplo de servidor local con la dependencia instalada:
+
+```bash
+strands-decider serve StrandsAgents/strands-decider-2B-qwen3.5-v1-2610 --device cpu --port 8000
 ```
+
+Mantén el servidor abierto y reinicia la consola tras cambiar su configuración. El indicador HTTP señala el endpoint configurado; no acredita por sí solo su salud ni el checkpoint efectivamente servido. El cliente tiene actualmente un timeout de cinco segundos.
+
+Para el agente, configura un modelo disponible mediante `BEDROCK_MODEL_ID`, la región `AWS_REGION` y credenciales/rol del entorno autorizado:
+
+```bash
+python -m agent.run_agent "Consulta el pedido ORD-1001."
+python -m agent.run_agent "Cancela el pedido ORD-1002; motivo: pedido duplicado."
+```
+
+La segunda solicitud puede abrir la confirmación CLI. No hay todavía una aprobación durable con TTL, identidad de aprobador o revalidación vinculada a la decisión. `--shadow` y `--no-shield` son opciones experimentales sobre datos mock; no deben conectarse a sistemas reales.
 
 ## Cómo decide
 
-1. **Reglas duras** (rol, montos, dominios de correo). Siempre mandan.
-2. **Decider 2B**: ¿argumentos fundamentados? ¿coincide con lo que pidió el usuario? ¿lo pidió texto de una herramienta (inyección)? ¿qué tan irreversible es?
-3. **combine()**: el Decider solo puede endurecer la decisión, nunca relajar una regla dura.
-4. **Strands**: `Proceed`, `Guide`, `Confirm` o `Deny` vía `InterventionHandler.before_tool_call`.
+1. La política comprueba allowlist por rol y reglas duras. Un `deny` omite la construcción del estado y la llamada al Decider, y queda auditado con scores/latencia en `null`.
+2. En las demás rutas se consultan cuatro preguntas en una llamada: `grounded`, `intent`, `injected` (`noul`) y `blast` (`score`).
+3. `combine()` produce `proceed`, `guide`, `confirm` o `deny`. Rechaza números inválidos, conserva el cierre ante errores y no convierte un `guide` por intención/argumentos negativos en aprobable por una regla `confirm`.
+4. El handler traduce la decisión a las intervenciones de Strands. La cancelación válida exige confirmación por regla dura.
 
-Datos y empresa ficticios. No es una barrera de seguridad definitiva: es una capa adicional sobre IAM y reglas.
+La banda intermedia de scores todavía produce `confirm`; cambiarla a aclaración es un pendiente del plan unificado. La política conserva herramientas y reglas históricas que deben alinearse al catálogo de tres tools.
+
+## Datos, auditoría y pruebas
+
+- Diez pedidos sintéticos `ORD-1001` a `ORD-1010`, con estados, versiones e historial.
+- El mock usa memoria por defecto. Al proporcionar un archivo SQLite, reabrirlo conserva sus datos; `reset()` es explícito y transaccional.
+- Auditoría JSONL y SSE con redacción recursiva de credenciales por nombre de campo. No detecta secretos dentro de texto libre ni minimiza automáticamente el contexto enviado a modelos.
+- Resultado de referencia de esta consolidación: **139 tests aprobados** en Windows/Python 3.13.16 y **7/7 escenarios con mock**. El main base `96aade8` tenía 131; se incorporan ocho tests del hook. Ver [ESTADO.md](docs/ESTADO.md) para alcance y procedencia.
+- CI ejecuta los jobs `test` y `test-windows` en pushes a `main` y PR con destino `main`.
+
+## Consola
+
+Incluye temas oscuro/claro, medidores, modo shadow y timeline SSE. Las siguientes capturas son ilustrativas de la versión visual original: muestran escenarios anteriores y no acreditan el catálogo ni una ejecución E2E actual.
+
+![Tema oscuro, captura histórica](docs/img/consola-oscuro.jpg)
+
+![Tema claro, captura histórica](docs/img/consola-claro.jpg)
+
+## Documentación y alcance
+
+| Documento | Uso |
+|---|---|
+| [ESTADO.md](docs/ESTADO.md) | Evidencia actual, límites y trabajo integrado. |
+| [BACKLOG.md](docs/BACKLOG.md) | Próximas entregas y criterios de aceptación. |
+| [EQUIPO.md](docs/EQUIPO.md) | Responsabilidades y contratos realmente implementados. |
+| [PROPUESTA.md](docs/PROPUESTA.md) | Producto objetivo y escenarios unificados. |
+| [integracion.md](docs/integracion.md) | Plan de convergencia; contiene objetivos aún pendientes. |
+| [analisis.md](docs/analisis.md) | Diagnóstico histórico contra el commit base original. |
+| [DIA1.md](docs/DIA1.md) | Referencia de preparación inicial, no checklist de estado actual. |
+
+Proyecto para AWS Agent Experience Hackathon: Strands Decider. Patrón `#guardrails`; tags de entrega `#strands-decider-2b` y `#guardrails`. El alcance de la guía incluye GET real de staging y despliegue AWS; no se consideran terminados por tener mocks o tests verdes.
+
+Código bajo [Apache License 2.0](LICENSE). AgentShield es un prototipo experimental y requiere controles de autorización independientes.

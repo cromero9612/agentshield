@@ -1,8 +1,7 @@
 # Guía para Windows
 
 AgentShield corre en Windows, macOS y Linux. Los comandos del README y de [DIA1.md](DIA1.md) están escritos para
-macOS/Linux; aquí van los equivalentes en **PowerShell**. Todo el proyecto funciona **sin GPU y sin AWS** con el
-Decider simulado, así que cualquiera puede desarrollar desde el primer día.
+macOS/Linux; aquí van los equivalentes en **PowerShell**. La consola de fixtures y los tests funcionan **sin GPU y sin AWS** con modelos simulados. El agente generativo real requiere Bedrock.
 
 ## 1. Requisitos
 | Qué | Cómo (PowerShell) |
@@ -32,7 +31,7 @@ uvicorn console.app:app --reload --port 8080
 - `pip install -r requirements.txt` descarga PyTorch (varios GB). Es normal la primera vez.
 
 ## 3. Variables de entorno
-Lo más simple es copiar `.env.example` a `.env` y editarlo (`Copy-Item .env.example .env`): el proyecto lo carga solo.
+Si aún no tienes `.env`, copia `.env.example` a `.env` y edítalo: el proyecto lo carga solo. No sobrescribas configuración existente. Con DECIDER_URL configurado, el benchmark consulta el endpoint real; sin esa URL usa mock. El cliente tiene actualmente un timeout de cinco segundos.
 Para una sola sesión:
 ```powershell
 $env:DECIDER_URL = "http://localhost:8000"      # PowerShell
@@ -57,6 +56,7 @@ Invoke-RestMethod http://localhost:8000/v1/systemone -Method Post -ContentType "
 
 ## 5. Scripts `.sh`
 `scripts/crear_issues.sh` necesita bash: usa **Git Bash** (viene con Git) o WSL.
+Es para carga inicial y no deduplica. No volver a ejecutarlo sobre este repositorio ya poblado; para inspeccionar su salida usar únicamente DRY_RUN.
 ```bash
 DRY_RUN=1 bash scripts/crear_issues.sh <owner>/agentshield
 ```

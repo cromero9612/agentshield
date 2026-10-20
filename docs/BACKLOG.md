@@ -1,62 +1,63 @@
-# Backlog por día y por persona
+# Backlog unificado
 
-Entrega: **jueves 22** (el viernes 23 es colchón). Cierre oficial: 23 de octubre, 11:59 PM PDT = 12:59 AM del sábado 24 en Guatemala.
-`scripts/crear_issues.sh` crea estos issues en GitHub con su etiqueta y milestone.
+**Actualizado:** 19 de octubre de 2026. Referencia de código: main 96aade8; la consolidación de código visual y tests Strands se entrega en un PR propio. Los estados describen evidencia, no tareas automáticamente cerradas en GitHub.
 
-## Sáb 17 · Día 1: base
+Entrega interna objetivo del equipo: 22 de octubre. El cierre e inscripción se verifican con las reglas del evento. Los issues existentes #1…28 fueron creados con el alcance anterior: hay que revisar sus criterios, sin duplicarlos ni inferir que un issue abierto significa ausencia de código.
 
-| Persona | Tarea |
-|---|---|
-| A | Confirmar reglas (elegibilidad, equipos), crear repo, subir base, invitar al equipo, tablero |
-| A | Correr `examples/strands/` del repo oficial del Decider y comparar con `guard.py` |
-| B | Probar `agent/run_agent.py` con Bedrock en cuanto haya credenciales |
-| C | Levantar la consola local y proponer el diseño de la pantalla del video (boceto) |
-| D | Cuenta AWS, MFA, presupuesto, usuarios IAM, acceso a Bedrock, pedir cuota de GPU |
+**No reejecutar scripts/crear_issues.sh sobre este repositorio.** Es una utilidad de carga inicial sin deduplicación. El formato diario de las tablas sigue siendo compatible con su lectura, pero cambiar este documento no sincroniza ni cierra issues externos.
 
-## Dom 18 · El guard con el modelo real
+## Estado de las etapas
 
-| Persona | Tarea |
-|---|---|
-| A | Probar las 4 preguntas con el Decider real y ajustar redacción y `criteria` |
-| A | Si la latencia lo pide: medir 4 preguntas juntas vs. separadas |
-| B | Agente completo con las 8 herramientas; escenarios AS-01 a AS-06 reproducibles por CLI |
-| B | Pasar a la consola el contexto real del agente (mensajes y salidas de herramientas) |
-| C | Consola: línea de tiempo por SSE, semáforo, detalle de las 4 respuestas con barras |
-| D | EC2 con GPU + `strands-decider serve`; compartir `DECIDER_URL` |
-| Todos | 10 casos nuevos cada uno en `bench/cases.jsonl` (ataques para módulos que no hiciste) |
+| Etapa | Estado comprobado | Gate pendiente |
+|---|---|---|
+| U-01: alcance/contratos | Tres tools y casos unified-1 en código; documentación alineada en esta consolidación. | Coordinar los contratos futuros de contexto y ejecución. |
+| U-02: inferencia real | Constructor de agente/cliente HTTP; tests de hook con modelos simulados recuperados. | Bedrock + Decider real + hook + tool en ejecución documentada. |
+| U-03: dominio | Diez pedidos, tres tools, puerto/mock, estados/versiones/historial; persistencia de archivo corregida. | Conectar contexto autorizado y almacenamiento del servicio según despliegue. |
+| U-04: política | Hard deny previo, errores auditados, números válidos y cancelación siempre confirmada. | Alinear permisos/catálogo y aclaración ante incertidumbre. |
+| U-05: ejecución/aprobación | Confirmación CLI, validación de negocio. | Ejecutor, identidad, aprobación durable, TTL, versión y consumo único. |
+| U-06: REST/aislamiento | Puerto disponible. | GET staging, registry, secretos, dry_run y producción bloqueada. |
+| U-07: consola/evaluación | Evaluación de fixtures, siete casos mock, auditoría y diseño; no ejecución web. | Fuente, efectos, correlación, corpus >=16 y evaluación real. |
+| U-08: publicación | Licencia y documentos iniciales. | Patrón autónomo, runbook AWS, artículo, video y enlaces verificados. |
 
-## Lun 19 · Humano en el ciclo y explicación
+## Lun 19 · Consolidación y evidencia mínima
 
 | Persona | Tarea |
 |---|---|
-| A | Explicación al operador con Bedrock cuando el veredicto no es Proceed |
-| B | Flujo `Confirm`: el agente pausa y la consola aprueba o rechaza |
-| C | Botón aprobar/rechazar, interruptor sombra/enforce, formulario "ticket del atacante" |
-| D | Auditoría a DynamoDB; desplegar consola + agente en la EC2 (o ECS) |
+| A | Revisar la promoción del código del PR #35 y los tests #36; alinear documentos al código sin traer estados históricos como hechos actuales. |
+| B | Ejecutar lectura con Bedrock y Decider real por CLI; registrar modelo, región, propuesta, intervención y pedido devuelto. |
+| D | Resolver acceso/modelo/cuotas y conectividad del endpoint Decider; documentar resultados reales sin esperar una GPU para todo el trabajo. |
+| C | Revisar la consola recuperada; especificar fuente/efecto y separar evaluación visual de ejecución. |
 
-## Mar 20 · Medición
-
-| Persona | Tarea |
-|---|---|
-| D | Benchmark Decider vs. LLM juez con los ~50 casos; CSV y gráficas |
-| A | Curva de umbral 0.6–0.97; elegir umbral final y documentar errores del Decider |
-| B | Correr los 6 escenarios de punta a punta con el modelo real; arreglar lo que falle |
-| C | Pulir la consola para grabar: tipografía grande, colores, transiciones |
-
-## Mié 21 · Patrón, video y artículo
+## Mar 20 · Ejecutor y aprobación
 
 | Persona | Tarea |
 |---|---|
-| A | README del patrón (`agentshield/`) con nota de uso y ejemplo de 30 líneas; borrador del artículo |
-| C | Grabar el video (guion en PROPUESTA) con B como operador y D como atacante |
-| D | Sección de resultados del artículo con tablas y gráficas |
-| B | Ensayo completo del demo y lista de comandos para el video |
+| A | Definir contexto confiable y decisión vinculada; no convertir incertidumbre en operación aprobable sin aclaración. |
+| B | Implementar ejecutor y aprobación durable: pedido intacto pendiente/rechazado, TTL, hash de argumentos, versión y consumo único. |
+| C | Conectar aprobación al servicio común; evitar una ruta de escritura directa desde el botón. |
+| D | Probar AS-06/07/08 con contadores y efectos; comprobar reinicio, permisos y concurrencia. |
 
-## Jue 22 · Entrega
+## Mié 21 · Integración staging y evaluación
 
 | Persona | Tarea |
 |---|---|
-| A | Publicar artículo con tags `#strands-decider-2b` y `#guardrails`; enviar el proyecto |
-| C | Editar y subir video público (< 3:00), subtítulos en inglés |
-| D | Verificar repo público, licencia, README, CI en verde; apagar recursos que no se usen |
-| B | Probar todos los links en ventana privada; checklist final |
+| B | Implementar RestOrderConnector GET contra API de staging independiente de fixtures, con mapeo tipado. |
+| A | Registry/entorno administrados, estado autorizado y límites; producción apagada. |
+| D | AS-09/10/11: HTTP real, cero escrituras en dry_run y cero llamadas de negocio ante destino/alcance inválido. |
+| C | Mostrar fuente, conector, inferencia, correlación y efecto; adaptar formulario de ataque a notas de pedido. |
+| Todos | Preparar >=16 entradas etiquetadas; separar calibración y evaluación. No comparar las métricas del catálogo antiguo como si fuera el mismo corpus. |
+
+## Jue 22 · Entrega verificable
+
+| Persona | Tarea |
+|---|---|
+| A | Documentar el patrón reutilizable, finalizar artículo y revisar tags/inscripción. |
+| D | Runbook de instalación/despliegue/cleanup y evidencia E2E desde AWS; revisar acceso y costos reales. |
+| C | Grabar video breve con fuente explícita, lectura real, GET staging y aprobación mock. |
+| B | Ensayo reproducible y revisión de enlaces públicos con otro integrante. |
+
+## Recortes y condiciones
+
+Posponer escrituras REST, comparativa avanzada de LLM, gráficos sofisticados e IaC completa hasta cerrar P0. Mantener lectura REST de staging como requisito del alcance v2.1; si se recorta, declarar el desvío.
+
+No hay tareas obligatorias de DynamoDB, inventario, reembolsos o correo. La presentación usa el catálogo real de tres tools. Las capturas históricas y los tests con modelos simulados no sustituyen evidencia de inferencia real.

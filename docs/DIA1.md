@@ -1,6 +1,7 @@
 # Día 1: dejar todo listo
 
 > Avance real de este día y pendientes: ver [ESTADO.md](ESTADO.md).
+> Referencia histórica de preparación inicial. No reejecutar el generador de issues en el repositorio existente; los pendientes actuales están en [BACKLOG.md](BACKLOG.md).
 
 Orden recomendado. Lo marcado con **(A)** lo hace Carlos, **(D)** la Persona D, **(Todos)** cada uno.
 
@@ -20,11 +21,11 @@ Orden recomendado. Lo marcado con **(A)** lo hace Carlos, **(D)** la Persona D, 
    git add . && git commit -m "Base del proyecto" && git push
    ```
 4. *Settings → Collaborators*: invitar a B, C y D.
-5. *Settings → Branches*: proteger `main` (requiere PR y que pase el check `tests`).
-6. Crear el tablero: *Projects → New project → Board*, y vincularlo al repo.
-7. Crear issues, etiquetas y milestones de golpe (requiere [GitHub CLI](https://cli.github.com) con `gh auth login`):
+5. *Settings → Branches*: proteger `main` (requiere PR y que pase el check `test`; el workflow se llama `tests`).
+6. Usar los issues y milestones existentes; un tablero adicional es opcional.
+7. Solo para inicializar otro repositorio, revisar primero la simulación del generador (requiere [GitHub CLI](https://cli.github.com) con `gh auth login`):
    ```bash
-   bash scripts/crear_issues.sh <org>/agentshield
+   DRY_RUN=1 bash scripts/crear_issues.sh <org>/agentshield
    ```
 
 ## 2. Cada miembro (Todos, 20 min)
@@ -35,7 +36,7 @@ python -m venv .venv && source .venv/bin/activate   # Python 3.10+ (en macOS: uv
 pip install -r requirements.txt
 pytest -q && python -m bench.run_bench
 ```
-Si ves `36 passed` y `12/12`, ya puedes trabajar aunque AWS aún no esté listo.
+Las cantidades vigentes de tests y casos se registran en [ESTADO.md](ESTADO.md). El benchmark mock permite desarrollar sin AWS; no acredita inferencia real ni el agente completo.
 
 ## 3. AWS (D, 1–2 h)
 

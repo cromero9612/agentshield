@@ -1,9 +1,11 @@
 # Integración de AgentShield: un solo alcance para la hackathon
 
 **Fecha:** 18 de octubre de 2026.  
-**Estado:** plan de convergencia propuesto para el equipo; describe el objetivo y la migración, no funcionalidades ya implementadas.  
+**Estado:** plan de referencia para la convergencia. El catálogo de tres herramientas ya existe; las capacidades pendientes y la evidencia vigente están en [ESTADO.md](ESTADO.md).
 **Base:** código actual del repositorio, guía de implementación v2.1 y [análisis de brechas](analisis.md).  
 **Resultado buscado:** un agente, un catálogo de herramientas, un guard, una política, un flujo de aprobación y una demo que puedan explicar todos los integrantes.
+
+> **Nota de vigencia (19-oct-2026):** las columnas que describen el repositorio de ocho herramientas corresponden al punto de partida del 18-oct. Este documento conserva el razonamiento de la migración; no es el inventario actual ni acredita que contexto, aprobación durable o REST estén implementados. Los contratos existentes están en [EQUIPO.md](EQUIPO.md), separados de los futuros.
 
 ## 1. Decisión central
 
