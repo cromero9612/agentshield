@@ -14,7 +14,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install strands-agents pyyaml fastapi uvicorn pytest httpx
+      - run: pip install strands-agents pyyaml fastapi uvicorn pytest httpx ollama
       - run: pytest -q
 
   # Comprobacion en Windows (no es un check requerido). Si falla, avisa que algo no corre en Windows.
@@ -25,7 +25,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install strands-agents pyyaml fastapi uvicorn pytest httpx
+      - run: pip install strands-agents pyyaml fastapi uvicorn pytest httpx ollama
       - run: pytest -q
         env:
           PYTHONUTF8: "1"
