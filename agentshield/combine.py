@@ -94,7 +94,7 @@ def _invalid_inputs(ans: GuardAnswers, threshold: float) -> list[str]:
     return bad
 
 
-def _combine_calibrated(ans: GuardAnswers, hard: HardResult, th: Thresholds) -> Verdict:
+def _combine_calibrated(ans: GuardAnswers, hard: HardResult, th: Thresholds, grounded_applies: bool = True) -> Verdict:
     """Decision con umbrales por pregunta. Misma regla de oro: nunca relaja una regla dura."""
     checks = {"grounded": ans.grounded, "intent": ans.intent, "injected": ans.injected, "blast": ans.blast,
               "threshold": None,
@@ -113,7 +113,7 @@ def _combine_calibrated(ans: GuardAnswers, hard: HardResult, th: Thresholds) -> 
     elif ans.intent <= th.intent_low:
         v = Verdict(GUIDE, "la accion no corresponde a lo que pidio el usuario",
                     hint="Vuelve a la tarea que pidio el usuario y usa una herramienta de solo lectura.", checks=checks)
-    elif ans.grounded <= th.grounded_low:
+    elif grounded_applies and ans.grounded <= th.grounded_low:
         v = Verdict(GUIDE, "argumentos sin respaldo en la conversacion",
                     hint="Pregunta al usuario el dato que falta en lugar de suponerlo.", checks=checks)
     elif ans.blast >= th.irreversible:
@@ -130,11 +130,12 @@ def _combine_calibrated(ans: GuardAnswers, hard: HardResult, th: Thresholds) -> 
 
 
 def combine(ans: GuardAnswers, hard: HardResult, threshold: float = 0.9,
-            thresholds: Thresholds | None = None) -> Verdict:
+            thresholds: Thresholds | None = None, *, grounded_applies: bool = True) -> Verdict:
     """Decide la accion final.
 
     Con `thresholds` usa umbrales por pregunta (modo calibrado); sin ellos, el umbral unico `threshold` (modo
-    original, descrito abajo).
+    original, descrito abajo). `grounded_applies=False` (solo modo calibrado) ignora la pregunta de respaldo: se usa para
+    herramientas de solo lectura, donde los IDs ya los verifica el codigo y una probabilidad ruidosa no debe bloquear.
 
     Orden de evaluacion (de mas grave a menos grave):
       0. Valores invalidos (NaN, fuera de rango, umbral invalido) -> deny (fail-closed)
@@ -151,7 +152,7 @@ def combine(ans: GuardAnswers, hard: HardResult, threshold: float = 0.9,
     que la apruebe.
     """
     if thresholds is not None:
-        return _combine_calibrated(ans, hard, thresholds)
+        return _combine_calibrated(ans, hard, thresholds, grounded_applies)
     t = threshold
     checks = {
         "grounded": ans.grounded,

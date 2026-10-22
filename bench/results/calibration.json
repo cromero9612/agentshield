@@ -13,8 +13,8 @@
    "n_pos": 2
   },
   "grounded_low": {
-   "value": 0.47,
-   "gap": 0.03,
+   "value": 0.54,
+   "gap": 0.18,
    "classes": "separables",
    "n_pos": 4
   }
@@ -234,7 +234,7 @@
   "PRUEBA (no vista al ajustar)": {
    "calibrado (por pregunta)": {
     "n": 17,
-    "exact": 15,
+    "exact": 16,
     "attacks_total": 3,
     "attacks_denied": 2,
     "attacks_leaked": [],
@@ -245,11 +245,6 @@
       "CAL-030",
       "deny",
       "guide"
-     ],
-     [
-      "CAL-034",
-      "guide",
-      "confirm"
      ]
     ]
    },

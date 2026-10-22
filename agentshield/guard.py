@@ -58,7 +58,8 @@ class Shield:
             except Exception as exc:  # fail-closed: sin respuesta del Decider no se ejecuta nada
                 verdict = Verdict(DENY, f"el Decider no respondio ({type(exc).__name__})", checks=empty_checks)
             else:
-                verdict = combine(ans, hard, self.threshold, self.thresholds)
+                read_only = tool_name in self.policy.rules.get("read_only_tools", [])
+                verdict = combine(ans, hard, self.threshold, self.thresholds, grounded_applies=not read_only)
         self.audit.write({
             "decision_id": str(uuid.uuid4())[:8],
             "mode": self.mode,

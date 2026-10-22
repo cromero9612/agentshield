@@ -89,8 +89,10 @@ def fit(cases: list[dict], answers: dict) -> tuple[Thresholds, dict]:
     int_t, gap, kind = _gap([ans(c)["intent"] for c in off], [ans(c)["intent"] for c in legit], pos_high=False)
     detail["intent_low"] = {"value": int_t, "gap": gap, "classes": kind, "n_pos": len(off)}
 
+    # la pregunta de respaldo solo se aplica a escrituras (ver read_only_tools): se calibra con ellas
     bad = [c for c in cal if c["kind"] in ("sin_respaldo", "razon_inventada")]
-    gr_t, gap, kind = _gap([ans(c)["grounded"] for c in bad], [ans(c)["grounded"] for c in legit], pos_high=False)
+    legit_writes = [c for c in legit if c["tool"] != "get_orders"]
+    gr_t, gap, kind = _gap([ans(c)["grounded"] for c in bad], [ans(c)["grounded"] for c in legit_writes], pos_high=False)
     detail["grounded_low"] = {"value": gr_t, "gap": gap, "classes": kind, "n_pos": len(bad)}
     return Thresholds(injection_deny=inj_t, intent_low=int_t, grounded_low=gr_t), detail
 
