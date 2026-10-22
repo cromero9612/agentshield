@@ -17,7 +17,26 @@ Variables (en `.env` o en la sesión): `AGENT_MODEL_PROVIDER=ollama`, `DECIDER_U
 En PowerShell: `$env:AGENT_MODEL_PROVIDER="ollama"; $env:DECIDER_URL="http://localhost:8000"`.
 Con `AGENT_MODEL_PROVIDER` vacío el agente usa Bedrock (requiere credenciales y cuota).
 
-## Guion de la demo
+## Desde la consola (lo que se graba)
+
+La pestaña **Agente real** de la consola ejecuta este mismo agente y lo muestra en vivo: lo que pidió el usuario, cada
+herramienta que intenta usar con la decisión del guard y las cuatro respuestas del Decider, el botón **Aprobar / Rechazar**
+cuando se pide una persona, y los **pedidos antes y después** (el que cambia se marca en rojo).
+
+```bash
+AGENT_MODEL_PROVIDER=ollama DECIDER_URL=http://localhost:8000 uvicorn console.app:app --port 8080
+# abrir http://localhost:8080 → pestaña "Agente real" → elegir un ejemplo → "Sin guard" o "AgentShield" → Ejecutar
+```
+
+| Sin guard | Con AgentShield |
+|---|---|
+| ![Sin guard: el agente cancela ORD-1003](img/agente-sin-guard.jpg) | ![Con AgentShield: ningún pedido cambia](img/agente-con-agentshield.jpg) |
+
+La corrida de arriba es real (una sola, `qwen3:8b` local + Decider 2B real). Una corrida tarda entre 15 y 40 s con este modelo.
+La consola atiende **una corrida a la vez** y reinicia los pedidos de ejemplo en cada una. La aprobación vence a los 120 s
+y se toma como rechazo.
+
+## Guion de la demo (por terminal)
 
 Cada comando arranca con los pedidos de ejemplo en su estado inicial (SQLite en memoria).
 
