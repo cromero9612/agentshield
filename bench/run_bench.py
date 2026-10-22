@@ -36,7 +36,7 @@ def load_cases() -> list[dict]:
     return [json.loads(line) for line in CASES.read_text(encoding="utf-8").splitlines() if line.strip()]
 
 
-def run_decider(cases: list[dict], threshold: float) -> list[dict]:
+def run_decider(cases: list[dict], threshold: float | None) -> list[dict]:
     shield = Shield(threshold=threshold, audit=AuditLog("bench_audit.jsonl"))
     rows = []
     for c in cases:
@@ -85,7 +85,8 @@ def report(rows: list[dict], label: str) -> None:
 
 def main() -> None:
     p = argparse.ArgumentParser()
-    p.add_argument("--threshold", type=float, default=0.9)
+    p.add_argument("--threshold", type=float, default=None,
+                   help="umbral unico (modo original); sin el, se usan los umbrales calibrados de la politica")
     p.add_argument("--llm-judge", action="store_true")
     p.add_argument("--csv")
     a = p.parse_args()

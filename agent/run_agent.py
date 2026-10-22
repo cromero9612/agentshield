@@ -27,7 +27,7 @@ SYSTEM_PROMPT = (
 )
 
 
-def build_agent(shield_mode: str | None = "enforce", threshold: float = 0.9) -> Agent:
+def build_agent(shield_mode: str | None = "enforce", threshold: float | None = None) -> Agent:
     model = BedrockModel(
         model_id=os.getenv("BEDROCK_MODEL_ID", "global.anthropic.claude-sonnet-4-6"),
         region_name=os.getenv("AWS_REGION", "us-east-1"),
@@ -49,7 +49,8 @@ def main() -> None:
     g = p.add_mutually_exclusive_group()
     g.add_argument("--shadow", action="store_true")
     g.add_argument("--no-shield", action="store_true")
-    p.add_argument("--threshold", type=float, default=0.9)
+    p.add_argument("--threshold", type=float, default=None,
+                   help="umbral unico (modo original); sin el, se usan los umbrales calibrados")
     a = p.parse_args()
     mode = None if a.no_shield else ("shadow" if a.shadow else "enforce")
     agent = build_agent(mode, a.threshold)

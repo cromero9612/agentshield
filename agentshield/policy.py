@@ -9,7 +9,7 @@ from pathlib import Path
 
 import yaml
 
-from .combine import CONFIRM, DENY, PROCEED, HardResult
+from .combine import CONFIRM, DENY, PROCEED, HardResult, Thresholds
 
 DEFAULT_POLICY = Path(__file__).resolve().parent.parent / "policies" / "default.yaml"
 
@@ -17,6 +17,22 @@ DEFAULT_POLICY = Path(__file__).resolve().parent.parent / "policies" / "default.
 class Policy:
     def __init__(self, path: str | Path = DEFAULT_POLICY):
         self.rules = yaml.safe_load(Path(path).read_text(encoding="utf-8"))
+
+    def thresholds(self) -> Thresholds | None:
+        """Umbrales calibrados por pregunta (seccion `decider.thresholds` del YAML); None si no estan definidos."""
+        cfg = (self.rules.get("decider") or {}).get("thresholds")
+        return Thresholds(**cfg) if cfg else None
+
+    @staticmethod
+    def grounding_gaps(tool_input: dict, user_request: str, tool_outputs: list[str] | None) -> list[str]:
+        """Identificadores de pedido que el agente uso pero que no aparecen ni en lo que pidio el usuario ni en lo que
+        leyo. Es una comprobacion exacta (no una probabilidad): un ID inventado no se resuelve preguntando al modelo."""
+        text = (user_request + "\n" + "\n".join(tool_outputs or [])).lower()
+        ids = []
+        for key in ("order_id", "order_ids"):
+            v = tool_input.get(key)
+            ids += v if isinstance(v, list) else [v]
+        return [i for i in ids if isinstance(i, str) and i and i.lower() not in text]
 
     def check(self, tool_name: str, tool_input: dict, role: str = "agente_soporte") -> HardResult:
         r = self.rules

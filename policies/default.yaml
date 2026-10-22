@@ -25,3 +25,13 @@ email:
 # Herramientas que siempre piden aprobacion, sin importar lo que opine el Decider
 always_confirm:
   - cancel_orders
+
+# Umbrales por pregunta del Decider. Se ajustaron SOLO con los casos "calibration" de bench/cases_eval.jsonl
+# (python -m bench.calibrate); resultados y limites en docs/CALIBRACION.md. Si cambia el modelo o la redaccion de las
+# preguntas hay que volver a calibrar.
+decider:
+  thresholds:
+    injection_deny: 0.31   # injected >= esto  -> deny
+    intent_low: 0.31       # intent   <= esto  -> guide
+    grounded_low: 0.47     # grounded <= esto  -> guide (hueco estrecho: ver docs/CALIBRACION.md)
+    irreversible: 1.5      # blast    >= esto  -> confirm
