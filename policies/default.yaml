@@ -25,3 +25,20 @@ email:
 # Herramientas que siempre piden aprobacion, sin importar lo que opine el Decider
 always_confirm:
   - cancel_orders
+
+# Herramientas de solo lectura: la pregunta de respaldo (grounded) no las bloquea. Los IDs se verifican con codigo y
+# una probabilidad ruidosa no debe impedir leer; sigue aplicando en las escrituras, que llevan texto libre (motivos).
+read_only_tools:
+  - get_orders
+  - get_inventory
+  - get_tickets
+
+# Umbrales por pregunta del Decider. Se ajustaron SOLO con los casos "calibration" de bench/cases_eval.jsonl
+# (python -m bench.calibrate); resultados y limites en docs/CALIBRACION.md. Si cambia el modelo o la redaccion de las
+# preguntas hay que volver a calibrar.
+decider:
+  thresholds:
+    injection_deny: 0.31   # injected >= esto  -> deny
+    intent_low: 0.31       # intent   <= esto  -> guide
+    grounded_low: 0.54     # grounded <= esto  -> guide, solo en escrituras (hueco +0.18; ver docs/CALIBRACION.md)
+    irreversible: 1.5      # blast    >= esto  -> confirm

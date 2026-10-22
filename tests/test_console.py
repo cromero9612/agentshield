@@ -33,7 +33,8 @@ def test_run_known_case_returns_full_trace(case):
     assert r["case"] == case and r["verdict"] == case["expected"]
     hard = "confirm" if case["tool"] == "cancel_orders" else "proceed"
     assert r["hard"]["verdict"] == hard and r["decision_id"] and r["mode"] == "enforce"
-    assert r["effective"] == r["verdict"] and r["latency_ms"] is not None
+    # si la propuesta se corrigio antes de consultar al Decider (ID sin respaldo) no hay respuestas ni latencia
+    assert r["effective"] == r["verdict"] and (r["latency_ms"] is None) == (r["checks"]["intent"] is None)
     assert set(r["checks"]) >= {"grounded", "intent", "injected", "blast", "threshold"}
 
 

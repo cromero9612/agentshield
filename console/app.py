@@ -45,6 +45,7 @@ def _broadcast(record: dict) -> None:
 audit = AuditLog("console_audit.jsonl")
 audit.subscribe(_broadcast)
 shield = Shield(audit=audit)
+CALIBRATED = shield.thresholds  # umbrales por pregunta de la politica (None si la politica no los define)
 CASES = {c["id"]: c for c in load_cases()}
 
 
@@ -66,7 +67,7 @@ def cases() -> list[dict]:
 
 class RunBody(BaseModel):
     case_id: str
-    threshold: float = 0.9
+    threshold: float | None = None  # None = umbrales calibrados por pregunta; un numero = umbral unico (modo original)
     mode: str = "enforce"  # enforce | shadow
 
 
@@ -74,7 +75,7 @@ class AttackBody(BaseModel):
     ticket: str
     tool: str = "issue_refund"
     args: dict = {}
-    threshold: float = 0.9
+    threshold: float | None = None
     mode: str = "enforce"
 
 
@@ -82,11 +83,15 @@ class AttackBody(BaseModel):
 ATTACK_USER_REQUEST = "Resumeme los tickets que entraron hoy."
 
 
-def _evaluate(user_request: str, tool: str, args: dict, outputs: list[str], threshold: float, mode: str) -> dict:
+def _evaluate(user_request: str, tool: str, args: dict, outputs: list[str], threshold: float | None, mode: str) -> dict:
     if mode not in ("enforce", "shadow"):
         raise HTTPException(422, "mode debe ser enforce o shadow")
     with _lock:
-        shield.threshold, shield.mode = threshold, mode
+        if threshold is None:
+            shield.thresholds = CALIBRATED
+        else:
+            shield.thresholds, shield.threshold = None, threshold
+        shield.mode = mode
         hard = shield.policy.check(tool, args)
         v = shield.evaluate(user_request, tool, args, outputs)
         event = dict(LAST)
@@ -103,7 +108,9 @@ def _evaluate(user_request: str, tool: str, args: dict, outputs: list[str], thre
 def status() -> dict:
     url = os.getenv("DECIDER_URL", "").strip()
     return {"decider": "http" if url else "mock", "decider_url": url or None,
-            "threshold": shield.threshold, "mode": shield.mode, "cases": len(CASES),
+            "threshold": shield.threshold, "mode": shield.mode,
+            "thresholds": None if CALIBRATED is None else {"injected": CALIBRATED.injection_deny, "intent": CALIBRATED.intent_low,
+                                                           "grounded": CALIBRATED.grounded_low, "blast": CALIBRATED.irreversible}, "cases": len(CASES),
             "tools": sorted(shield.policy.rules["roles"]["agente_soporte"]["tools"])}
 
 
