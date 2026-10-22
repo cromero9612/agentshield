@@ -22,6 +22,7 @@ from pydantic import BaseModel
 from agentshield.audit import AuditLog
 from agentshield.guard import Shield
 from bench.run_bench import load_cases
+from console.agent_runner import MODES, Runner
 
 app = FastAPI(title="AgentShield console")
 STATIC = Path(__file__).parent / "static"
@@ -47,6 +48,7 @@ audit.subscribe(_broadcast)
 shield = Shield(audit=audit)
 CALIBRATED = shield.thresholds  # umbrales por pregunta de la politica (None si la politica no los define)
 CASES = {c["id"]: c for c in load_cases()}
+runner = Runner(audit)
 
 
 @app.on_event("startup")
@@ -104,10 +106,64 @@ def _evaluate(user_request: str, tool: str, args: dict, outputs: list[str], thre
     }
 
 
+class AgentRunBody(BaseModel):
+    request: str
+    mode: str = "enforce"  # off | enforce | shadow
+
+
+class ApprovalBody(BaseModel):
+    approved: bool
+
+
+@app.post("/api/agent/run")
+def agent_run(body: AgentRunBody) -> dict:
+    """Lanza el agente real de Strands (modelo segun AGENT_MODEL_PROVIDER) y devuelve el id para consultarlo."""
+    if body.mode not in MODES:
+        raise HTTPException(422, f"mode debe ser uno de {', '.join(MODES)}")
+    if not body.request.strip() or len(body.request) > 500:
+        raise HTTPException(422, "request es obligatorio y mide como maximo 500 caracteres")
+    run = runner.start(body.request, body.mode)
+    if run is None:
+        raise HTTPException(409, "ya hay una corrida del agente en curso")
+    return {"run_id": run.id}
+
+
+@app.get("/api/agent/run/{run_id}")
+def agent_run_state(run_id: str) -> dict:
+    run = runner.runs.get(run_id)
+    if run is None:
+        raise HTTPException(404, "corrida desconocida")
+    return run.to_dict()
+
+
+@app.post("/api/agent/run/{run_id}/approve")
+def agent_run_approve(run_id: str, body: ApprovalBody) -> dict:
+    run = runner.runs.get(run_id)
+    if run is None:
+        raise HTTPException(404, "corrida desconocida")
+    if not run.approve(body.approved):
+        raise HTTPException(409, "la corrida no esta esperando una aprobacion")
+    return {"ok": True}
+
+
+def _agent_info() -> dict:
+    from agent.run_agent import describe_model
+    label, provider = describe_model(), os.getenv("AGENT_MODEL_PROVIDER", "bedrock").strip().lower()
+    ready = None  # Bedrock: no se puede saber sin una llamada
+    if provider == "ollama":
+        import urllib.request
+        try:
+            urllib.request.urlopen(os.getenv("OLLAMA_HOST", "http://localhost:11434") + "/api/version", timeout=1)
+            ready = True
+        except Exception:  # noqa: BLE001
+            ready = False
+    return {"agent_model": label, "agent_provider": provider, "agent_ready": ready}
+
+
 @app.get("/api/status")
 def status() -> dict:
     url = os.getenv("DECIDER_URL", "").strip()
-    return {"decider": "http" if url else "mock", "decider_url": url or None,
+    return {**_agent_info(), "decider": "http" if url else "mock", "decider_url": url or None,
             "threshold": shield.threshold, "mode": shield.mode,
             "thresholds": None if CALIBRATED is None else {"injected": CALIBRATED.injection_deny, "intent": CALIBRATED.intent_low,
                                                            "grounded": CALIBRATED.grounded_low, "blast": CALIBRATED.irreversible}, "cases": len(CASES),
