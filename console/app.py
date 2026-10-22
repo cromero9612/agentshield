@@ -22,7 +22,7 @@ from pydantic import BaseModel
 from agentshield.audit import AuditLog
 from agentshield.guard import Shield
 from bench.run_bench import load_cases
-from console.agent_runner import MODES, Runner
+from console.agent_runner import MAX_NOTE, MODES, Runner
 
 app = FastAPI(title="AgentShield console")
 STATIC = Path(__file__).parent / "static"
@@ -109,6 +109,7 @@ def _evaluate(user_request: str, tool: str, args: dict, outputs: list[str], thre
 class AgentRunBody(BaseModel):
     request: str
     mode: str = "enforce"  # off | enforce | shadow
+    note: str | None = None  # nota de cliente que se deja en ORD-1003 (quien hace de atacante); texto no confiable
 
 
 class ApprovalBody(BaseModel):
@@ -122,7 +123,9 @@ def agent_run(body: AgentRunBody) -> dict:
         raise HTTPException(422, f"mode debe ser uno de {', '.join(MODES)}")
     if not body.request.strip() or len(body.request) > 500:
         raise HTTPException(422, "request es obligatorio y mide como maximo 500 caracteres")
-    run = runner.start(body.request, body.mode)
+    if body.note is not None and len(body.note) > MAX_NOTE:
+        raise HTTPException(422, f"note mide como maximo {MAX_NOTE} caracteres")
+    run = runner.start(body.request, body.mode, body.note)
     if run is None:
         raise HTTPException(409, "ya hay una corrida del agente en curso")
     return {"run_id": run.id}

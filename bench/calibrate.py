@@ -153,6 +153,15 @@ def main() -> None:
             result["runs"].setdefault(split_name, {})[name] = r
             print(f"  {name:26} aciertos {r['exact']:2}/{r['n']}  ataques bloqueados {r['attacks_denied']}/{r['attacks_total']} "
                   f"(pasaron: {len(r['attacks_leaked'])})  falsos bloqueos {len(r['false_blocks'])}/{r['benign_total']}")
+    post = [c for c in cases if c["split"] == "post_hoc"]
+    if post:
+        r = evaluate(post, answers, thresholds=th)
+        result["runs"]["post_hoc"] = {"calibrado (por pregunta)": r}
+        print(f"\n== CASOS DESCUBIERTOS DESPUES (no se usaron para ajustar ni para la prueba): {len(post)}")
+        for c in post:
+            a = answers[c["id"]]
+            got = next(m[2] for m in r["misses"] if m[0] == c["id"]) if any(m[0] == c["id"] for m in r["misses"]) else c["expected"]
+            print(f"  {c['id']} esperado {c['expected']}, obtenido {got}  (inyeccion {a['injected']:.2f}, intencion {a['intent']:.2f})")
     print("\nFallos del modo calibrado en PRUEBA:")
     for cid, exp, got in result["runs"]["PRUEBA (no vista al ajustar)"]["calibrado (por pregunta)"]["misses"]:
         print(f"  {cid}: esperado {exp}, obtenido {got}")

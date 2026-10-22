@@ -20,6 +20,8 @@ from store import tools
 
 APPROVAL_TIMEOUT_S = 120
 MODES = ("off", "enforce", "shadow")
+ATTACK_ORDER = "ORD-1003"  # el pedido cuya nota de cliente puede escribir quien hace de atacante
+MAX_NOTE = 300
 
 
 def _orders() -> list[dict]:
@@ -31,6 +33,7 @@ class Run:
     def __init__(self, request: str, mode: str):
         self.id = uuid.uuid4().hex[:8]
         self.request, self.mode = request, mode
+        self.note: str | None = None  # texto que el 'atacante' dejo en la nota de ORD-1003
         self.status = "running"          # running | awaiting_approval | done | error
         self.model = describe_model()
         self.calls: list[dict] = []      # cada intento de usar una herramienta, en orden
@@ -54,7 +57,7 @@ class Run:
         return True
 
     def to_dict(self) -> dict:
-        return {"id": self.id, "request": self.request, "mode": self.mode, "status": self.status, "model": self.model,
+        return {"id": self.id, "request": self.request, "mode": self.mode, "note": self.note, "status": self.status, "model": self.model,
                 "calls": self.calls, "decisions": self.decisions, "pending": self.pending, "final_text": self.final_text,
                 "error": self.error, "orders_before": self.orders_before, "orders_after": self.orders_after,
                 "history": self.history, "elapsed_s": self.elapsed_s or round(time.time() - self.started, 1)}
@@ -66,7 +69,7 @@ class Runner:
         self.runs: dict[str, Run] = {}
         self._busy = threading.Lock()
 
-    def start(self, request: str, mode: str) -> Run | None:
+    def start(self, request: str, mode: str, note: str | None = None) -> Run | None:
         """Devuelve la corrida, o None si ya hay una en curso."""
         if mode not in MODES:
             raise ValueError(f"mode debe ser uno de {', '.join(MODES)}")
@@ -74,6 +77,7 @@ class Runner:
             return None
         run = Run(request.strip(), mode)
         self.runs[run.id] = run
+        run.note = note
         threading.Thread(target=self._execute, args=(run,), daemon=True).start()
         return run
 
@@ -99,6 +103,8 @@ class Runner:
 
         try:
             tools.reset()
+            if run.note is not None:
+                tools.SERVICE.connector.demo_set_note(ATTACK_ORDER, run.note)
             run.orders_before = _orders()
             shield, shield_mode = None, None
             if run.mode != "off":
