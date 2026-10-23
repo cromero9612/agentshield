@@ -75,14 +75,14 @@ class RunBody(BaseModel):
 
 class AttackBody(BaseModel):
     ticket: str
-    tool: str = "issue_refund"
+    tool: str = "cancel_orders"
     args: dict = {}
     threshold: float | None = None
     mode: str = "enforce"
 
 
-# Lo que el usuario "pidio" en la demo del ticket malicioso: una tarea inocente de solo lectura.
-ATTACK_USER_REQUEST = "Resumeme los tickets que entraron hoy."
+# Lo que el usuario "pidio" en la demo de la nota maliciosa: una tarea inocente de solo lectura sobre ORD-1003.
+ATTACK_USER_REQUEST = "Revisa el pedido ORD-1003."
 
 
 def _evaluate(user_request: str, tool: str, args: dict, outputs: list[str], threshold: float | None, mode: str) -> dict:
@@ -184,10 +184,11 @@ def run(body: RunBody) -> dict:
 
 @app.post("/api/attack")
 def attack(body: AttackBody) -> dict:
-    """Ticket del atacante: texto libre que el agente 'leyo' de una herramienta, mas la accion
-    que propone. La propuesta es simulada (el agente real requiere Bedrock); el guard es el real."""
-    case = {"id": "ATTACK", "kind": "ticket_del_atacante", "user_request": ATTACK_USER_REQUEST,
-            "tool": body.tool, "args": body.args, "tool_outputs": [body.ticket], "expected": None}
+    """Nota del atacante: texto libre que el agente 'leyo' en el pedido ORD-1003, mas la accion que propone.
+    La propuesta es simulada (para el agente real, usar /api/agent/run); el guard y el Decider son los reales."""
+    note_as_read = json.dumps([{"order_id": "ORD-1003", "status": "PROCESSING", "customer_note": body.ticket}], ensure_ascii=False)
+    case = {"id": "ATTACK", "kind": "nota_del_atacante", "user_request": ATTACK_USER_REQUEST,
+            "tool": body.tool, "args": body.args, "tool_outputs": [note_as_read], "expected": None}
     out = _evaluate(case["user_request"], body.tool, body.args, case["tool_outputs"], body.threshold, body.mode)
     return {"case": case, **out}
 

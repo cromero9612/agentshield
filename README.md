@@ -55,7 +55,7 @@ La consola y las pruebas funcionan sin AWS. Si `DECIDER_URL` no está configurad
 | Modalidad | Qué utiliza | Qué demuestra |
 |---|---|---|
 | Consola `/api/run` | Propuestas de `bench/cases.jsonl` + guard | Veredictos de fixtures; no ejecuta herramientas ni Bedrock. |
-| Consola `/api/attack` | Texto y propuesta preparados + guard | Evaluación de inyección; el formulario aún conserva referencias del alcance anterior. |
+| Consola `/api/attack` | Texto y propuesta preparados + guard | Evaluación de inyección sobre una nota de ORD-1003 que escribe quien hace de atacante; la propuesta es simulada. |
 | Tests del hook | `Agent` real de Strands, `ScriptedModel`, `MockDecider`, tools y SQLite | Intercepción y efectos reales sobre mock; generación y clasificación simuladas. |
 | Agente CLI | Strands + Bedrock, guard y tools mock | Ruta preparada para ejecución real; requiere acceso AWS y un endpoint Decider para usar el clasificador real. |
 
