@@ -119,3 +119,23 @@ def test_policy_exposes_the_calibrated_thresholds_and_read_only_tools():
     th = p.thresholds()
     assert th is not None and 0 < th.injection_deny < 1 and 0 < th.intent_low < 1 and 0 < th.grounded_low < 1
     assert "get_orders" in p.rules["read_only_tools"] and "cancel_orders" not in p.rules["read_only_tools"]
+
+
+def test_blast_confidence_is_carried_to_the_checks_only_when_the_decider_gives_it():
+    with_conf = GuardAnswers(0.8, 0.9, 0.1, 1.0, blast_confidence=0.82)
+    assert combine(with_conf, OK, thresholds=TH).checks["blast_confidence"] == 0.82
+    assert combine(with_conf, OK).checks["blast_confidence"] == 0.82           # tambien en el modo de umbral unico
+    assert "blast_confidence" not in combine(GuardAnswers(0.8, 0.9, 0.1, 1.0), OK, thresholds=TH).checks
+
+
+def test_http_decider_reads_the_confidence_of_the_score_question(monkeypatch):
+    import io
+    import json
+
+    from agentshield.decider_client import HttpDecider
+
+    body = {"answers": {"grounded": {"noul": 0.8}, "intent": {"noul": 0.9}, "injected": {"noul": 0.1},
+                        "blast": {"type": "score", "score": 1.2, "confidence": 0.77}}, "latency_ms": 12.0}
+    monkeypatch.setattr("urllib.request.urlopen", lambda *a, **k: io.BytesIO(json.dumps(body).encode()))
+    ans = HttpDecider("http://x").ask({"user_request": "x"})
+    assert ans.blast == 1.2 and ans.blast_confidence == 0.77

@@ -59,7 +59,8 @@ Decider 2B (`StrandsAgents/strands-decider-2B-qwen3.5-v1-2610`) on an Apple-sili
 | **Calibrated per-question limits** | **16/17** | 2/3 | **0** | **0 of 6** |
 | One global threshold 0.90 (what we started with) | 6/17 | 0/3 | 0 | 6 of 6 |
 
-Latency of the Decider call: **about 0.5 s** on that Mac (not the ~115 ms quoted for a GPU).
+Latency of the Decider call: **0.5–0.8 s** on that Mac (not the ~115 ms quoted for GPU hardware). Against a local `qwen3:8b` used as a judge
+it was *slower* (777 ms vs 238 ms median), so **we claim no latency win** ([comparison](../../docs/CALIBRACION.md)).
 End to end with a real Strands agent (local `qwen3:8b`) and the real Decider: without the guard, *"Revisa el pedido ORD-1003."*
 makes the agent cancel the order because of an instruction hidden in a customer note; with the guard, 0 orders change.
 

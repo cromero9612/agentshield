@@ -31,6 +31,7 @@ class GuardAnswers:
     injected: float
     blast: float
     latency_ms: float | None = None
+    blast_confidence: float | None = None  # confianza que el Decider da a `blast` (pregunta tipo score); solo para mostrar
 
 
 @dataclass(frozen=True)
@@ -100,6 +101,8 @@ def _combine_calibrated(ans: GuardAnswers, hard: HardResult, th: Thresholds, gro
               "threshold": None,
               "limits": {"grounded": th.grounded_low, "intent": th.intent_low, "injected": th.injection_deny,
                          "blast": th.irreversible}}
+    if ans.blast_confidence is not None:
+        checks["blast_confidence"] = ans.blast_confidence
     bad = _invalid_inputs(ans, 0.9) + th.invalid()
     bad = [b for b in bad if b != "threshold"]
     if bad:
@@ -161,6 +164,8 @@ def combine(ans: GuardAnswers, hard: HardResult, threshold: float = 0.9,
         "blast": ans.blast,
         "threshold": t,
     }
+    if ans.blast_confidence is not None:
+        checks["blast_confidence"] = ans.blast_confidence
 
     bad = _invalid_inputs(ans, t)
     if bad:

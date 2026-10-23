@@ -427,7 +427,7 @@ function callNode(tool, args) {
   parts.push(')');
   return h('div', {class:'call'}, parts);
 }
-function gauge(q, val, t, limit) {
+function gauge(q, val, t, limit, conf) {
   const has = typeof val === 'number';
   const pct = has ? Math.max(0, Math.min(1, val / q.max)) * 100 : 0;
   let bad, mid, marks, zone = null;
@@ -446,7 +446,7 @@ function gauge(q, val, t, limit) {
   const fill = h('div', {class:'fill', style:`--c:${color};--w:${pct}%`});
   const bar = h('div', {class:'bar'}, zone, fill, marks);
   return h('div', {class:'gauge'},
-    h('div', {class:'lbl'}, h('span', {}, q.t, q.tag ? h('small', {}, ' · ' + q.tag) : null),
+    h('div', {class:'lbl'}, h('span', {}, q.t, q.tag ? h('small', {}, ' · ' + q.tag) : null, typeof conf === 'number' ? h('small', {}, ' · confianza ' + conf.toFixed(2)) : null),
       h('span', {class:'val', style:'color:' + color}, has ? val.toFixed(2) : '—')), bar);
 }
 function step(n, delay, ...kids) {
@@ -469,7 +469,7 @@ function render(r) {
   // 4. decider
   const lim = r.checks.limits || null, t = r.checks.threshold ?? 0.9;
   const s4 = step(4, 3, h('h3', {}, 'Strands Decider 2B · 4 preguntas en una sola llamada'),
-    h('div', {class:'gauges'}, QUESTIONS.map(q => gauge(q, r.checks[q.k], t, lim ? lim[q.k] : null))),
+    h('div', {class:'gauges'}, QUESTIONS.map(q => gauge(q, r.checks[q.k], t, lim ? lim[q.k] : null, q.k === 'blast' ? r.checks.blast_confidence : null))),
     h('div', {class:'muted', style:'font-size:12px;margin-top:2px'}, lim
       ? 'La raya de cada medidor es su límite calibrado: inyección alta bloquea, intención o respaldo bajos corrigen, impacto alto pide aprobación.'
       : 'Umbral único manual: la franja ámbar es la zona de duda entre ' + (1 - t).toFixed(2) + ' y ' + t.toFixed(2) + '.'));
@@ -526,7 +526,7 @@ const MODE_LABEL = {off:'Sin guard', enforce:'AgentShield', shadow:'Modo sombra'
 function decisionMini(d) {
   const a = d.answers || {}, f = k => typeof a[k] === 'number' ? a[k].toFixed(2) : '—';
   return h('div', {class:'mini'}, h('span', {}, 'respaldo ', h('b', {}, f('grounded'))), h('span', {}, 'intención ', h('b', {}, f('intent'))),
-    h('span', {}, 'inyección ', h('b', {}, f('injected'))), h('span', {}, 'impacto ', h('b', {}, f('blast'))),
+    h('span', {}, 'inyección ', h('b', {}, f('injected'))), h('span', {}, 'impacto ', h('b', {}, f('blast')), typeof a.blast_confidence === 'number' ? ' (confianza ' + a.blast_confidence.toFixed(2) + ')' : ''),
     typeof d.latency_ms === 'number' ? h('span', {}, h('b', {}, d.latency_ms.toFixed(0) + ' ms')) : null);
 }
 function ordersGrid(before, after) {
