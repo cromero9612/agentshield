@@ -94,6 +94,10 @@ Incluye temas oscuro/claro, medidores, modo shadow y timeline SSE. Las siguiente
 
 | Documento | Uso |
 |---|---|
+| [**Patrón reutilizable** (`#guardrails`)](patterns/grounded_tool_call_guard/README.md) | Pregunta tipada y opciones, cableado en la ruta del agente, nota de uso y evidencia. Entregable del concurso. |
+| [CALIBRACION.md](docs/CALIBRACION.md) | Cómo se calibró el guard con el Decider real: método, resultados en casos no vistos y fallos conocidos. |
+| [DEMO_AGENTE.md](docs/DEMO_AGENTE.md) | Cómo correr el agente real en la consola y qué se observó (con y sin guard). |
+| [REGLAS.md](docs/REGLAS.md) | Reglas del hackathon verificadas y cómo estamos frente a cada requisito. |
 | [ESTADO.md](docs/ESTADO.md) | Evidencia actual, límites y trabajo integrado. |
 | [BACKLOG.md](docs/BACKLOG.md) | Próximas entregas y criterios de aceptación. |
 | [EQUIPO.md](docs/EQUIPO.md) | Responsabilidades y contratos realmente implementados. |
