@@ -36,6 +36,21 @@ La corrida de arriba es real (una sola, `qwen3:8b` local + Decider 2B real). Una
 La consola atiende **una corrida a la vez** y reinicia los pedidos de ejemplo en cada una. La aprobación vence a los 120 s
 y se toma como rechazo.
 
+## Con Bedrock (cuando haya acceso)
+
+El agente ya soporta Bedrock; solo falta una credencial que funcione. Una **clave de API de Bedrock de corta duración** (consola de
+Bedrock → Claves de API, caduca en horas) basta. **Nunca la subas al repo ni la pegues en chats.**
+
+```bash
+export AWS_BEARER_TOKEN_BEDROCK="..."          # PowerShell: $env:AWS_BEARER_TOKEN_BEDROCK="..."
+python -m agent.bedrock_check                  # prueba los modelos y recomienda las lineas de .env
+export AGENT_MODEL_PROVIDER=bedrock AWS_REGION=us-east-1 BEDROCK_MODEL_ID=<el que recomiende el diagnostico>
+DECIDER_URL=http://localhost:8000 uvicorn console.app:app --port 8080     # el panel izquierdo muestra "Bedrock · <modelo>"
+```
+La consola imprime el modelo en uso (`Bedrock · …` u `Ollama LOCAL (no es Bedrock) · …`), así que las capturas y el video dejan
+claro cuál se usó. Si Bedrock llega a ejecutarse, **actualiza la sección "Amazon Bedrock" de `docs/ARTICULO.md` y el resumen
+del README** con lo que realmente se corrió (modelo, región y una corrida), y borra la frase de que no se ejecutó.
+
 ## Guion de la demo (por terminal)
 
 Cada comando arranca con los pedidos de ejemplo en su estado inicial (SQLite en memoria).
