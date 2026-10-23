@@ -118,6 +118,12 @@ class MockOrderConnector:
                 raise NotCancellable(f"{order_id} esta en {order.status}; solo se cancela desde PENDING o PROCESSING")
             return self._write(order, "CANCELLED", reason)
 
+    def demo_set_note(self, order_id: str, note: str | None) -> None:
+        """Solo para demos y pruebas: fija el texto de `customer_note` (dato NO confiable) de un pedido. No pasa por el
+        puerto ni por el servicio, y no cuenta como mutacion de negocio (sin version ni historial)."""
+        with self._lock, self._conn:
+            self._conn.execute("UPDATE orders SET customer_note=? WHERE order_id=?", (note, order_id))
+
     # -- evidencia (pruebas y demo antes/despues) -------------------------------------------------
     def mutation_count(self) -> int:
         with self._lock:

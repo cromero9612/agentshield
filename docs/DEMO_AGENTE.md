@@ -17,7 +17,41 @@ Variables (en `.env` o en la sesión): `AGENT_MODEL_PROVIDER=ollama`, `DECIDER_U
 En PowerShell: `$env:AGENT_MODEL_PROVIDER="ollama"; $env:DECIDER_URL="http://localhost:8000"`.
 Con `AGENT_MODEL_PROVIDER` vacío el agente usa Bedrock (requiere credenciales y cuota).
 
-## Guion de la demo
+## Desde la consola (lo que se graba)
+
+La pestaña **Agente real** de la consola ejecuta este mismo agente y lo muestra en vivo: lo que pidió el usuario, cada
+herramienta que intenta usar con la decisión del guard y las cuatro respuestas del Decider, el botón **Aprobar / Rechazar**
+cuando se pide una persona, y los **pedidos antes y después** (el que cambia se marca en rojo).
+
+```bash
+AGENT_MODEL_PROVIDER=ollama DECIDER_URL=http://localhost:8000 uvicorn console.app:app --port 8080
+# abrir http://localhost:8080 → pestaña "Agente real" → elegir un ejemplo → "Sin guard" o "AgentShield" → Ejecutar
+```
+
+| Sin guard | Con AgentShield |
+|---|---|
+| ![Sin guard: el agente cancela ORD-1003](img/agente-sin-guard.jpg) | ![Con AgentShield: ningún pedido cambia](img/agente-con-agentshield.jpg) |
+
+La corrida de arriba es real (una sola, `qwen3:8b` local + Decider 2B real). Una corrida tarda entre 15 y 40 s con este modelo.
+La consola atiende **una corrida a la vez** y reinicia los pedidos de ejemplo en cada una. La aprobación vence a los 120 s
+y se toma como rechazo.
+
+## Con Bedrock (cuando haya acceso)
+
+El agente ya soporta Bedrock; solo falta una credencial que funcione. Una **clave de API de Bedrock de corta duración** (consola de
+Bedrock → Claves de API, caduca en horas) basta. **Nunca la subas al repo ni la pegues en chats.**
+
+```bash
+export AWS_BEARER_TOKEN_BEDROCK="..."          # PowerShell: $env:AWS_BEARER_TOKEN_BEDROCK="..."
+python -m agent.bedrock_check                  # prueba los modelos y recomienda las lineas de .env
+export AGENT_MODEL_PROVIDER=bedrock AWS_REGION=us-east-1 BEDROCK_MODEL_ID=<el que recomiende el diagnostico>
+DECIDER_URL=http://localhost:8000 uvicorn console.app:app --port 8080     # el panel izquierdo muestra "Bedrock · <modelo>"
+```
+La consola imprime el modelo en uso (`Bedrock · …` u `Ollama LOCAL (no es Bedrock) · …`), así que las capturas y el video dejan
+claro cuál se usó. Si Bedrock llega a ejecutarse, **actualiza la sección "Amazon Bedrock" de `docs/ARTICULO.md` y el resumen
+del README** con lo que realmente se corrió (modelo, región y una corrida), y borra la frase de que no se ejecutó.
+
+## Guion de la demo (por terminal)
 
 Cada comando arranca con los pedidos de ejemplo en su estado inicial (SQLite en memoria).
 

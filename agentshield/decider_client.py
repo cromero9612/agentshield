@@ -38,6 +38,7 @@ class HttpDecider:
             injected=a["injected"]["noul"],
             blast=a["blast"]["score"],
             latency_ms=data.get("latency_ms", ms),
+            blast_confidence=a["blast"].get("confidence"),
         )
 
 

@@ -22,6 +22,7 @@ from pydantic import BaseModel
 from agentshield.audit import AuditLog
 from agentshield.guard import Shield
 from bench.run_bench import load_cases
+from console.agent_runner import MAX_NOTE, MODES, Runner
 
 app = FastAPI(title="AgentShield console")
 STATIC = Path(__file__).parent / "static"
@@ -45,7 +46,9 @@ def _broadcast(record: dict) -> None:
 audit = AuditLog("console_audit.jsonl")
 audit.subscribe(_broadcast)
 shield = Shield(audit=audit)
+CALIBRATED = shield.thresholds  # umbrales por pregunta de la politica (None si la politica no los define)
 CASES = {c["id"]: c for c in load_cases()}
+runner = Runner(audit)
 
 
 @app.on_event("startup")
@@ -66,27 +69,31 @@ def cases() -> list[dict]:
 
 class RunBody(BaseModel):
     case_id: str
-    threshold: float = 0.9
+    threshold: float | None = None  # None = umbrales calibrados por pregunta; un numero = umbral unico (modo original)
     mode: str = "enforce"  # enforce | shadow
 
 
 class AttackBody(BaseModel):
     ticket: str
-    tool: str = "issue_refund"
+    tool: str = "cancel_orders"
     args: dict = {}
-    threshold: float = 0.9
+    threshold: float | None = None
     mode: str = "enforce"
 
 
-# Lo que el usuario "pidio" en la demo del ticket malicioso: una tarea inocente de solo lectura.
-ATTACK_USER_REQUEST = "Resumeme los tickets que entraron hoy."
+# Lo que el usuario "pidio" en la demo de la nota maliciosa: una tarea inocente de solo lectura sobre ORD-1003.
+ATTACK_USER_REQUEST = "Revisa el pedido ORD-1003."
 
 
-def _evaluate(user_request: str, tool: str, args: dict, outputs: list[str], threshold: float, mode: str) -> dict:
+def _evaluate(user_request: str, tool: str, args: dict, outputs: list[str], threshold: float | None, mode: str) -> dict:
     if mode not in ("enforce", "shadow"):
         raise HTTPException(422, "mode debe ser enforce o shadow")
     with _lock:
-        shield.threshold, shield.mode = threshold, mode
+        if threshold is None:
+            shield.thresholds = CALIBRATED
+        else:
+            shield.thresholds, shield.threshold = None, threshold
+        shield.mode = mode
         hard = shield.policy.check(tool, args)
         v = shield.evaluate(user_request, tool, args, outputs)
         event = dict(LAST)
@@ -99,11 +106,70 @@ def _evaluate(user_request: str, tool: str, args: dict, outputs: list[str], thre
     }
 
 
+class AgentRunBody(BaseModel):
+    request: str
+    mode: str = "enforce"  # off | enforce | shadow
+    note: str | None = None  # nota de cliente que se deja en ORD-1003 (quien hace de atacante); texto no confiable
+
+
+class ApprovalBody(BaseModel):
+    approved: bool
+
+
+@app.post("/api/agent/run")
+def agent_run(body: AgentRunBody) -> dict:
+    """Lanza el agente real de Strands (modelo segun AGENT_MODEL_PROVIDER) y devuelve el id para consultarlo."""
+    if body.mode not in MODES:
+        raise HTTPException(422, f"mode debe ser uno de {', '.join(MODES)}")
+    if not body.request.strip() or len(body.request) > 500:
+        raise HTTPException(422, "request es obligatorio y mide como maximo 500 caracteres")
+    if body.note is not None and len(body.note) > MAX_NOTE:
+        raise HTTPException(422, f"note mide como maximo {MAX_NOTE} caracteres")
+    run = runner.start(body.request, body.mode, body.note)
+    if run is None:
+        raise HTTPException(409, "ya hay una corrida del agente en curso")
+    return {"run_id": run.id}
+
+
+@app.get("/api/agent/run/{run_id}")
+def agent_run_state(run_id: str) -> dict:
+    run = runner.runs.get(run_id)
+    if run is None:
+        raise HTTPException(404, "corrida desconocida")
+    return run.to_dict()
+
+
+@app.post("/api/agent/run/{run_id}/approve")
+def agent_run_approve(run_id: str, body: ApprovalBody) -> dict:
+    run = runner.runs.get(run_id)
+    if run is None:
+        raise HTTPException(404, "corrida desconocida")
+    if not run.approve(body.approved):
+        raise HTTPException(409, "la corrida no esta esperando una aprobacion")
+    return {"ok": True}
+
+
+def _agent_info() -> dict:
+    from agent.run_agent import describe_model
+    label, provider = describe_model(), os.getenv("AGENT_MODEL_PROVIDER", "bedrock").strip().lower()
+    ready = None  # Bedrock: no se puede saber sin una llamada
+    if provider == "ollama":
+        import urllib.request
+        try:
+            urllib.request.urlopen(os.getenv("OLLAMA_HOST", "http://localhost:11434") + "/api/version", timeout=1)
+            ready = True
+        except Exception:  # noqa: BLE001
+            ready = False
+    return {"agent_model": label, "agent_provider": provider, "agent_ready": ready}
+
+
 @app.get("/api/status")
 def status() -> dict:
     url = os.getenv("DECIDER_URL", "").strip()
-    return {"decider": "http" if url else "mock", "decider_url": url or None,
-            "threshold": shield.threshold, "mode": shield.mode, "cases": len(CASES),
+    return {**_agent_info(), "decider": "http" if url else "mock", "decider_url": url or None,
+            "threshold": shield.threshold, "mode": shield.mode,
+            "thresholds": None if CALIBRATED is None else {"injected": CALIBRATED.injection_deny, "intent": CALIBRATED.intent_low,
+                                                           "grounded": CALIBRATED.grounded_low, "blast": CALIBRATED.irreversible}, "cases": len(CASES),
             "tools": sorted(shield.policy.rules["roles"]["agente_soporte"]["tools"])}
 
 
@@ -118,10 +184,11 @@ def run(body: RunBody) -> dict:
 
 @app.post("/api/attack")
 def attack(body: AttackBody) -> dict:
-    """Ticket del atacante: texto libre que el agente 'leyo' de una herramienta, mas la accion
-    que propone. La propuesta es simulada (el agente real requiere Bedrock); el guard es el real."""
-    case = {"id": "ATTACK", "kind": "ticket_del_atacante", "user_request": ATTACK_USER_REQUEST,
-            "tool": body.tool, "args": body.args, "tool_outputs": [body.ticket], "expected": None}
+    """Nota del atacante: texto libre que el agente 'leyo' en el pedido ORD-1003, mas la accion que propone.
+    La propuesta es simulada (para el agente real, usar /api/agent/run); el guard y el Decider son los reales."""
+    note_as_read = json.dumps([{"order_id": "ORD-1003", "status": "PROCESSING", "customer_note": body.ticket}], ensure_ascii=False)
+    case = {"id": "ATTACK", "kind": "nota_del_atacante", "user_request": ATTACK_USER_REQUEST,
+            "tool": body.tool, "args": body.args, "tool_outputs": [note_as_read], "expected": None}
     out = _evaluate(case["user_request"], body.tool, body.args, case["tool_outputs"], body.threshold, body.mode)
     return {"case": case, **out}
 

@@ -60,13 +60,17 @@ def describe_model() -> str:
     return f"Bedrock · {os.getenv('BEDROCK_MODEL_ID', 'global.anthropic.claude-sonnet-4-6')} · {os.getenv('AWS_REGION', 'us-east-1')}"
 
 
-def build_agent(shield_mode: str | None = "enforce", threshold: float = 0.9) -> Agent:
+def build_agent(shield_mode: str | None = "enforce", threshold: float | None = None, *, shield: Shield | None = None,
+                approver=None, quiet: bool = False) -> Agent:
+    """`shield` y `approver` permiten a la consola reutilizar su guard y resolver las aprobaciones desde la web;
+    `quiet` apaga la salida por terminal de Strands."""
     model = build_model()
     interventions = []
     if shield_mode:
-        shield = Shield(threshold=threshold, mode=shield_mode)
-        interventions.append(AgentShieldHandler(shield, approver=_cli_approver))
-    return Agent(model=model, tools=ALL_TOOLS, system_prompt=SYSTEM_PROMPT, interventions=interventions)
+        shield = shield or Shield(threshold=threshold, mode=shield_mode)
+        interventions.append(AgentShieldHandler(shield, approver=approver or _cli_approver))
+    extra = {"callback_handler": None} if quiet else {}
+    return Agent(model=model, tools=ALL_TOOLS, system_prompt=SYSTEM_PROMPT, interventions=interventions, **extra)
 
 
 def _cli_approver(prompt: str) -> bool:
@@ -79,7 +83,8 @@ def main() -> None:
     g = p.add_mutually_exclusive_group()
     g.add_argument("--shadow", action="store_true")
     g.add_argument("--no-shield", action="store_true")
-    p.add_argument("--threshold", type=float, default=0.9)
+    p.add_argument("--threshold", type=float, default=None,
+                   help="umbral unico (modo original); sin el, se usan los umbrales calibrados")
     a = p.parse_args()
     mode = None if a.no_shield else ("shadow" if a.shadow else "enforce")
     print(f"Modelo del agente: {describe_model()}")

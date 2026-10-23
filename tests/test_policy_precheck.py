@@ -30,7 +30,7 @@ class SpyDecider:
 def test_hard_deny_is_audited_without_invoking_decider(tmp_path, tool, args, role, unavailable):
     decider = SpyDecider(TimeoutError("sin respuesta") if unavailable else None)
     path = tmp_path / "audit.jsonl"
-    shield = Shield(decider=decider, audit=AuditLog(path))
+    shield = Shield(decider=decider, audit=AuditLog(path), threshold=0.9)
 
     verdict = shield.evaluate("Operacion de prueba", tool, args, role=role)
 
@@ -66,7 +66,7 @@ def test_allowed_proposals_still_invoke_decider_once(tmp_path, tool, args, expec
     path = tmp_path / "audit.jsonl"
     shield = Shield(decider=decider, audit=AuditLog(path))
 
-    verdict = shield.evaluate("Operacion autorizada", tool, args)
+    verdict = shield.evaluate("Operacion autorizada sobre ORD-1001 y ORD-1002", tool, args)
 
     assert verdict.action == expected and len(decider.states) == 1
     assert decider.states[0]["proposed_tool_call"] == {"name": tool, "arguments": args}
