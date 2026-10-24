@@ -24,3 +24,21 @@ agente usó Bedrock (no lo hizo), ni que el modelo "siempre" cae en la inyecció
 
 **Control de calidad antes de subir:** duración **< 3:00** en el editor; el video es **público**; se ven la puntuación de
 confianza y el resultado de cada corrida; los números coinciden con `docs/CALIBRACION.md`.
+
+
+---
+
+## Video ya generado (reproducible)
+
+`python -m tools.video.record_scenes` graba la consola **de verdad** (Playwright + tu Chrome) con el agente real corriendo, y
+`python -m tools.video.build_video` monta: tarjetas, voz (`say`, Samantha), subtítulos y la aceleración de las esperas con una etiqueta
+en pantalla. Resultado: `~/Downloads/agentshield-video/agentshield-demo.mp4` (1920×1080, ~2:47) y `agentshield-demo.srt`.
+
+- **Nada está simulado ni retocado:** las tres escenas son corridas reales (`marks_*.json` guarda el estado de cada una). **Antes de montar,
+  el script verifica que lo que se narra es cierto** (por ejemplo, que sin guard se canceló ORD-1003 y que con guard hubo `proceed` +
+  `deny` con 0 escrituras y esos mismos 0.12 y 0.58); si una corrida no coincide, se detiene en vez de publicar algo falso.
+- **Solo se aceleran las esperas**, y el video lo dice en pantalla ("Waiting sped up ×N · real run X s").
+- Requiere `ollama serve`, el Decider real, la consola (`AGENT_MODEL_PROVIDER=ollama`), `pip install playwright pillow`, `playwright install ffmpeg`
+  y `brew install ffmpeg`. Si cambian el modelo o los umbrales, hay que **volver a grabar** y revisar los números de `SCRIPT` en `build_video.py`.
+- La voz es sintética (macOS). Para una voz propia: grabar el texto de `SCRIPT` y reemplazar el audio con cualquier editor.
+- **Antes de subirlo:** verlo completo, dejarlo **público**, y cargar el `.srt` como subtítulos en inglés.
